@@ -104,6 +104,35 @@ function initCesium() {
         }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
     h.setInputAction(function (cl) {
+        // 禁飞区绘制模式
+        if (State.nfzDrawMode) {
+            var cartesian = v.camera.pickEllipsoid(cl.position, v.scene.globe.ellipsoid);
+            if (cartesian) {
+                var carto = Cesium.Cartographic.fromCartesian(cartesian);
+                var lng = Cesium.Math.toDegrees(carto.longitude);
+                var lat = Cesium.Math.toDegrees(carto.latitude);
+                State.nfzPoints.push([lng, lat]);
+                // 画点
+                var pt = v.entities.add({
+                    position: cartesian,
+                    point: { pixelSize: 8, color: Cesium.Color.RED, outlineColor: Cesium.Color.WHITE, outlineWidth: 1 },
+                });
+                State.nfzTempEntities.push(pt);
+                // 更新预览线
+                _clearNfzPreview();
+                if (State.nfzPoints.length >= 2) {
+                    var previewPos = [];
+                    for (var i = 0; i < State.nfzPoints.length; i++) previewPos.push(State.nfzPoints[i][0], State.nfzPoints[i][1]);
+                    previewPos.push(State.nfzPoints[0][0], State.nfzPoints[0][1]);
+                    var line = v.entities.add({
+                        polyline: { positions: Cesium.Cartesian3.fromDegreesArray(previewPos), width: 2, material: Cesium.Color.RED.withAlpha(0.5), clampToGround: true },
+                    });
+                    State.nfzPreviewLine = line;
+                }
+            }
+            return;
+        }
+
         // 地图选点模式拦截
         if (State.fpPickMode) {
             var cartesian = v.camera.pickEllipsoid(cl.position, v.scene.globe.ellipsoid);
@@ -150,12 +179,31 @@ function initCesium() {
         }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
     v.camera.changed.addEventListener(updateStatusBar);
+
+    // 右键取消禁飞区绘制
+    h.setInputAction(function () {
+        if (State.nfzDrawMode) {
+            State.nfzDrawMode = false;
+            State.nfzPoints = [];
+            _clearNfzTemp();
+            dom('btn-draw-nfz').textContent = '绘制禁飞区';
+            dom('btn-draw-nfz').style.background = '#ff4444';
+        }
+    }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
 }
 
 // ============ 城市切换 (瓦片化) ============
 async function switchCity(key) {
     if (State.isSwitching || State.currentCity === key) return;
     State.isSwitching = true;
+    // 重置绘制状态
+    State.nfzDrawMode = false;
+    State.nfzPoints = [];
+    _clearNfzTemp();
+    _clearCustomNfz();
+    var dbn = dom('btn-draw-nfz');
+    if (dbn) { dbn.textContent = '绘制禁飞区'; dbn.style.background = '#ff4444'; }
+
     const city = CITIES[key];
     console.log('[City]', city.name);
 
@@ -424,6 +472,103 @@ function bindUIEvents() {
             dom('fp-result').innerHTML = '<span style="color:#f44;">✗ ' + result + '</span>';
         }
     });
+    // ============ 禁飞区绘制 ============
+    State.nfzDrawMode = false;
+    State.nfzPoints = [];
+    State.nfzTempEntities = [];
+    State.customNfz = [];
+
+    dom('btn-draw-nfz').addEventListener('click', function () {
+        if (State.nfzDrawMode) {
+            // 完成绘制
+            _finishNfzDrawing();
+            this.textContent = '绘制禁飞区';
+            this.style.background = '#ff4444';
+        } else {
+            // 开始绘制
+            State.nfzDrawMode = true;
+            State.nfzPoints = [];
+            _clearNfzTemp();
+            this.textContent = '完成绘制 (右键取消)';
+            this.style.background = '#00cc66';
+        }
+    });
+    dom('btn-clear-nfz').addEventListener('click', function () {
+        _clearCustomNfz();
+        State.nfzDrawMode = false;
+        State.nfzPoints = [];
+        _clearNfzTemp();
+        dom('btn-draw-nfz').textContent = '绘制禁飞区';
+        dom('btn-draw-nfz').style.background = '#ff4444';
+    });
+
+    function _finishNfzDrawing() {
+        if (State.nfzPoints.length < 3) { State.nfzPoints = []; _clearNfzTemp(); return; }
+        // 闭合多边形
+        var pts = State.nfzPoints.slice();
+        pts.push(pts[0]);
+        // 创建多边形实体
+        var pos = [];
+        for (var i = 0; i < pts.length; i++) pos.push(pts[i][0], pts[i][1]);
+        var poly = State.viewer.entities.add({
+            polygon: {
+                hierarchy: Cesium.Cartesian3.fromDegreesArray(pos),
+                material: Cesium.Color.RED.withAlpha(0.2),
+                outline: true,
+                outlineColor: Cesium.Color.RED.withAlpha(0.6),
+                outlineWidth: 2,
+            },
+        });
+        poly._isCustomNfz = true;
+        var clat = 0, clng = 0;
+        for (var j = 0; j < State.nfzPoints.length; j++) { clat += State.nfzPoints[j][1]; clng += State.nfzPoints[j][0]; }
+        clat /= State.nfzPoints.length; clng /= State.nfzPoints.length;
+        // 计算半径
+        var maxR = 0;
+        for (var k = 0; k < State.nfzPoints.length; k++) {
+            var dlat = (State.nfzPoints[k][1] - clat) * 111000;
+            var dlon = (State.nfzPoints[k][0] - clng) * 111000 * Math.cos(clat * Math.PI / 180);
+            maxR = Math.max(maxR, Math.sqrt(dlat * dlat + dlon * dlon));
+        }
+        var zone = { lon: clng, lat: clat, r: maxR, n: '自定义禁飞区' + (State.customNfz.length + 1) };
+        State.customNfz.push(zone);
+        // 更新飞行器管理器
+        if (State.aircraftManager) {
+            var allZones = State.aircraftManager.noflyZones.concat(zone);
+            State.aircraftManager.setNoFlyZones(allZones);
+        }
+        State.nfzPoints = [];
+        _clearNfzTemp();
+    }
+
+    function _clearNfzTemp() {
+        for (var i = 0; i < State.nfzTempEntities.length; i++) {
+            State.viewer.entities.remove(State.nfzTempEntities[i]);
+        }
+        State.nfzTempEntities = [];
+        _clearNfzPreview();
+    }
+
+    function _clearNfzPreview() {
+        if (State.nfzPreviewLine) {
+            State.viewer.entities.remove(State.nfzPreviewLine);
+            State.nfzPreviewLine = null;
+        }
+    }
+
+    function _clearCustomNfz() {
+        // 移除所有自定义禁飞区实体
+        var viewer = State.viewer;
+        var all = viewer.entities.values;
+        for (var i = all.length - 1; i >= 0; i--) {
+            if (all[i]._isCustomNfz) viewer.entities.remove(all[i]);
+        }
+        State.customNfz = [];
+        if (State.aircraftManager) {
+            State.aircraftManager.setNoFlyZones([]);
+        }
+    }
+
     document.querySelectorAll('.city-btn').forEach(function (b) {
         b.addEventListener('click', function () {
             if (this.dataset.city && this.dataset.city !== State.currentCity) switchCity(this.dataset.city);
