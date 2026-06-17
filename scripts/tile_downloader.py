@@ -35,12 +35,12 @@ CITIES_EXPANDED = {
     },
     "guangzhou": {
         "name": "广州",
-        "bbox": {"south": 22.95, "west": 113.15, "north": 23.30, "east": 113.50},
+        "bbox": {"south": 22.90, "west": 113.00, "north": 23.50, "east": 113.80},
         "center": {"lon": 113.305, "lat": 23.13, "alt": 8000},
     },
     "shenzhen": {
         "name": "深圳",
-        "bbox": {"south": 22.45, "west": 113.80, "north": 22.75, "east": 114.20},
+        "bbox": {"south": 22.30, "west": 113.60, "north": 22.80, "east": 114.50},
         "center": {"lon": 114.00, "lat": 22.55, "alt": 7000},
     },
     "chongqing": {
