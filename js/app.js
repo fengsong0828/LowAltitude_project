@@ -130,6 +130,10 @@ async function switchCity(key) {
     console.log('[City]', city.name);
 
     clearScene();
+    // v2.0: 先清飞行器，再清瓦片（TileManager._unloadAll 内部处理）
+    if (State.aircraftManager) {
+        State.aircraftManager.clear();
+    }
     State.currentCity = key;
 
     showLoading(true, city.name + ' - 加载瓦片索引...');

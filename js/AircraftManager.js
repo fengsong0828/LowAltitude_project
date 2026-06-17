@@ -23,9 +23,8 @@ var AircraftManager = (function () {
 
     // ============ 加载 ============
     AircraftManager.prototype.loadCity = async function (cityKey) {
-        this.clear();
         this.cityKey = cityKey;
-        this._debug('clear done, loading: ' + cityKey);
+        this._debug('loading: ' + cityKey);
 
         try {
             this._debug('fetching fleet.json...');
@@ -133,7 +132,7 @@ var AircraftManager = (function () {
         });
         entity._acData = ac;
 
-        // 拖尾（简化：只存坐标点，不渲染实时polyline，减少分配）
+        // 拖尾（简化：节流更新）
         var trailEntity = this.viewer.entities.add({
             polyline: {
                 positions: Cesium.Cartesian3.fromDegreesArrayHeights([]),
@@ -142,7 +141,6 @@ var AircraftManager = (function () {
                 clampToGround: false,
             },
         });
-        // 每 2 秒更新一次拖尾（而非每帧）
         trailEntity._trailAc = ac;
         trailEntity._trailLastUpdate = 0;
 

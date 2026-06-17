@@ -276,9 +276,9 @@ var TileManager = (function () {
         // console.log('[Tile] 卸载: ' + tileKey);
     };
 
-    // ============ 卸载所有瓦片 ============
+    // ============ 卸载所有瓦片（立即，用于城市切换）============
     TileManager.prototype._unloadAll = function () {
-        // 清理所有待卸载计时器
+        // 取消所有待卸载定时器
         for (var key in this.pendingUnload) {
             if (this.pendingUnload.hasOwnProperty(key)) {
                 clearTimeout(this.pendingUnload[key]);
@@ -286,12 +286,16 @@ var TileManager = (function () {
         }
         this.pendingUnload = {};
 
-        // 强制卸载所有瓦片（不清除延迟定时器，直接移除）
+        // 立即移除所有已加载瓦片的实体
         var keys = Object.keys(this.loadedTiles);
         for (var i = 0; i < keys.length; i++) {
-            this._unloadTile(keys[i]);
+            var tile = this.loadedTiles[keys[i]];
+            if (tile && tile.entities) {
+                for (var j = 0; j < tile.entities.length; j++) {
+                    this.viewer.entities.remove(tile.entities[j]);
+                }
+            }
         }
-
         this.loadedTiles = {};
         this.visibleTileKeys = {};
         this.cityIndex = null;
