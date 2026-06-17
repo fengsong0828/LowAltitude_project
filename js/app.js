@@ -271,6 +271,41 @@ function bindUIEvents() {
     dom('btn-commloss').addEventListener('click', function () {
         if (State.aircraftManager) State.aircraftManager.testCommLoss();
     });
+    dom('btn-flightplan').addEventListener('click', function () {
+        var modal = document.getElementById('flightplan-modal');
+        if (modal) {
+            var bbox = State.tileManager.getCityBBox();
+            if (bbox) {
+                dom('fp-dep-lng').value = bbox.west.toFixed(4);
+                dom('fp-dep-lat').value = bbox.south.toFixed(4);
+                dom('fp-arr-lng').value = bbox.east.toFixed(4);
+                dom('fp-arr-lat').value = bbox.north.toFixed(4);
+            }
+            modal.style.display = 'block';
+            dom('fp-result').textContent = '';
+        }
+    });
+    dom('btn-fp-close').addEventListener('click', function () {
+        document.getElementById('flightplan-modal').style.display = 'none';
+    });
+    dom('btn-fp-submit').addEventListener('click', function () {
+        if (!State.aircraftManager) return;
+        var dlng = parseFloat(dom('fp-dep-lng').value);
+        var dlat = parseFloat(dom('fp-dep-lat').value);
+        var alng = parseFloat(dom('fp-arr-lng').value);
+        var alat = parseFloat(dom('fp-arr-lat').value);
+        if (isNaN(dlng) || isNaN(dlat) || isNaN(alng) || isNaN(alat)) {
+            dom('fp-result').innerHTML = '<span style="color:#f44;">请输入有效坐标</span>';
+            return;
+        }
+        var result = State.aircraftManager.submitFlightPlan(dlng, dlat, alng, alat);
+        if (result.startsWith('ok:')) {
+            dom('fp-result').innerHTML = '<span style="color:#0f0;">✓ 批准！新飞行器: ' + result.split(':')[1] + '</span>';
+            setTimeout(function () { document.getElementById('flightplan-modal').style.display = 'none'; }, 1500);
+        } else {
+            dom('fp-result').innerHTML = '<span style="color:#f44;">✗ ' + result + '</span>';
+        }
+    });
     document.querySelectorAll('.city-btn').forEach(function (b) {
         b.addEventListener('click', function () {
             if (this.dataset.city && this.dataset.city !== State.currentCity) switchCity(this.dataset.city);

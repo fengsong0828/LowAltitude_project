@@ -604,5 +604,35 @@ var AircraftManager = (function () {
         return false;
     };
 
+    // ============ 飞行计划 ============
+    AircraftManager.prototype.submitFlightPlan = function (depLng, depLat, arrLng, arrLat) {
+        if (this.aircraftList.length >= 8) return '已达飞行器数量上限(8架)';
+        // 简单冲突评估
+        for (var i = 0; i < this.aircraftList.length; i++) {
+            var ac = this.aircraftList[i];
+            var d1 = Math.sqrt(Math.pow((depLat - ac.currentLat) * 111000, 2) + Math.pow((depLng - ac.currentLng) * 111000 * Math.cos(depLat * Math.PI / 180), 2));
+            var d2 = Math.sqrt(Math.pow((arrLat - ac.currentLat) * 111000, 2) + Math.pow((arrLng - ac.currentLng) * 111000 * Math.cos(arrLat * Math.PI / 180), 2));
+            if (d1 < 500 || d2 < 500) return '与 ' + ac.callsign + ' 起终点冲突(' + Math.min(d1, d2).toFixed(0) + 'm)';
+        }
+        // 生成新飞行器
+        var id = 'FP-' + String(this.aircraftList.length + 1).padStart(2, '0');
+        var colors = ['#ffcc00', '#cc44ff', '#44ffcc', '#ff66aa'];
+        var color = colors[this.aircraftList.length % colors.length];
+        var alt = 200;
+        var route = [[depLng, depLat, alt], [(depLng + arrLng) / 2, (depLat + arrLat) / 2, alt + 30], [arrLng, arrLat, alt]];
+        var ac = {
+            id: id, callsign: '计划-' + id, type: 'delivery', typeName: '飞行计划',
+            color: color, speed: 18, route: route,
+            currentLng: depLng, currentLat: depLat, currentAlt: alt,
+            routeIndex: 0, routeProgress: 0, heading: 0,
+            battery: 100, moving: true, status: 'cruising', lowBattery: false, trailPoints: [],
+        };
+        this.aircraft[ac.id] = { config: ac, routeEntity: null };
+        this._createEntity(ac);
+        this.aircraftList.push(ac);
+        this._updatePanel();
+        return 'ok:' + id;
+    };
+
     return AircraftManager;
 })();

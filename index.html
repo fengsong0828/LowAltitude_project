@@ -106,6 +106,9 @@
                     <button class="btn btn-primary btn-sm" id="btn-flyto" style="flex:1;">飞至数据区</button>
                     <button class="btn btn-danger btn-sm" id="btn-commloss" style="flex:1;" title="选中飞行器后点击模拟通信丢失">通信丢失</button>
                 </div>
+                <div style="margin-top:4px;">
+                    <button class="btn btn-primary btn-sm" id="btn-flightplan" style="width:100%;">提交飞行计划</button>
+                </div>
             </div>
         </div>
 
@@ -138,6 +141,20 @@
 
     <!-- DEBUG: 舰队状态 -->
     <div id="debug-panel" style="position:absolute;bottom:36px;left:260px;color:#0f0;font-size:10px;z-index:300;background:rgba(0,0,0,0.8);padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="this.style.display='none'" title="点击关闭">舰队: 等待加载...</div>
+
+    <!-- 飞行计划模态框 -->
+    <div id="flightplan-modal" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:250;background:rgba(15,25,40,0.95);border:1px solid rgba(0,212,255,0.3);border-radius:10px;padding:16px;width:320px;color:#e0e8f0;">
+        <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:#00d4ff;">提交飞行计划</div>
+        <div class="ctrl-row"><label>出发经度</label><input id="fp-dep-lng" type="text" style="width:140px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;" placeholder="116.39"></div>
+        <div class="ctrl-row"><label>出发纬度</label><input id="fp-dep-lat" type="text" style="width:140px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;" placeholder="39.93"></div>
+        <div class="ctrl-row"><label>目的经度</label><input id="fp-arr-lng" type="text" style="width:140px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;" placeholder="116.43"></div>
+        <div class="ctrl-row"><label>目的纬度</label><input id="fp-arr-lat" type="text" style="width:140px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;" placeholder="39.97"></div>
+        <div id="fp-result" style="margin:8px 0;font-size:11px;"></div>
+        <div style="display:flex;gap:6px;">
+            <button class="btn btn-primary btn-sm" id="btn-fp-submit" style="flex:1;">提交评估</button>
+            <button class="btn btn-sm" id="btn-fp-close" style="flex:1;background:#444;color:#aaa;">取消</button>
+        </div>
+    </div>
 
     <!-- 应用入口 -->
     <script src="js/TileManager.js"></script>
