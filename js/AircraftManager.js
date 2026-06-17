@@ -143,8 +143,6 @@ var AircraftManager = (function () {
             },
         });
 
-        });
-
         // 拖尾（节流更新）
         var trailEntity = this.viewer.entities.add({
             polyline: {
@@ -196,7 +194,6 @@ var AircraftManager = (function () {
         var uri = canvas.toDataURL();
         AircraftManager._iconCache[key] = uri;
         return uri;
-    };
     };
 
     // ============ 仿真 ============
