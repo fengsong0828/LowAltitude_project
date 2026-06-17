@@ -299,6 +299,32 @@ function bindUIEvents() {
         if (!c) return;
         State.viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(c.lon, c.lat, c.alt), orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-90), roll: 0 }, duration: 1.2 });
     });
+    dom('btn-pause').addEventListener('click', function () {
+        if (State.aircraftManager) {
+            var paused = !State.aircraftManager.isActive;
+            State.aircraftManager.isActive = paused;
+            if (paused) {
+                State.aircraftManager._startSimulation();
+                this.textContent = '暂停仿真';
+                this.className = 'btn btn-success btn-sm';
+            } else {
+                if (State.aircraftManager.animFrame) {
+                    cancelAnimationFrame(State.aircraftManager.animFrame);
+                    State.aircraftManager.animFrame = null;
+                }
+                this.textContent = '继续仿真';
+                this.className = 'btn btn-warning btn-sm';
+            }
+        }
+    });
+    dom('speed-slider').addEventListener('input', function () {
+        var speed = parseInt(this.value);
+        dom('speed-value').textContent = speed + ' m/s';
+        if (State.aircraftManager && State.aircraftManager.selectedId) {
+            var ac = State.aircraftManager.aircraftList.find(function (a) { return a.id === State.aircraftManager.selectedId; });
+            if (ac) ac.speed = speed;
+        }
+    });
     dom('btn-commloss').addEventListener('click', function () {
         if (State.aircraftManager) {
             if (State.engineClient && State.engineClient.useBackend) {

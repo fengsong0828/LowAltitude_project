@@ -310,6 +310,23 @@ async def comm_loss(data: dict):
     return {"ok": False}
 
 
+@app.post("/api/set-speed")
+async def set_speed(data: dict):
+    ac_id = data.get("droneId", "")
+    speed = data.get("speed", 20)
+    ac = engine.drones.get(ac_id)
+    if ac:
+        ac.speed = speed
+        return {"ok": True}
+    return {"ok": False}
+
+
+@app.post("/api/toggle-pause")
+async def toggle_pause():
+    engine.running = not engine.running
+    return {"running": engine.running}
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
