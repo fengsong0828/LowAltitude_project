@@ -74,11 +74,45 @@ var AircraftManager = (function () {
         console.log('[Fleet DBG] ' + msg);
     };
 
-    // ============ 创建实体（航线+飞行器+标签） ============
+    // ============ 创建实体（图标+航线+标签） ============
     AircraftManager.prototype._createEntity = function (ac) {
-        var color = Cesium.Color.fromCssColorString(ac.color || '#ff6600');
+        var colorHex = ac.color || '#ff6600';
+        var color = Cesium.Color.fromCssColorString(colorHex);
 
-        // 航线：地面投影（贴地，宽线，暗色）
+        // 图标：发光的彩色圆形 Billboard
+        var iconUrl = this._makeCircleIcon(colorHex);
+        var entity = this.viewer.entities.add({
+            id: 'ac_' + ac.id,
+            position: Cesium.Cartesian3.fromDegrees(ac.currentLng, ac.currentLat, ac.currentAlt),
+            billboard: {
+                image: iconUrl,
+                width: 36,
+                height: 36,
+                verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                scaleByDistance: new Cesium.NearFarScalar(0, 1.2, 30000, 0.4),
+            },
+            point: {
+                pixelSize: 10,
+                color: color.withAlpha(0.8),
+                outlineColor: Cesium.Color.WHITE,
+                outlineWidth: 1,
+                scaleByDistance: new Cesium.NearFarScalar(10000, 1.5, 100000, 0.3),
+            },
+            label: {
+                text: ac.callsign,
+                font: 'bold 12px "Microsoft YaHei", sans-serif',
+                fillColor: Cesium.Color.WHITE,
+                outlineColor: Cesium.Color.fromCssColorString('#1a1a2e'),
+                outlineWidth: 2,
+                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                pixelOffset: new Cesium.Cartesian2(0, -24),
+                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 40000),
+            },
+        });
+        entity._acData = ac;
+
+        // 航线：贴地投影（暗色 + 虚点效果）
         var routePos2d = [];
         for (var i = 0; i < ac.route.length; i++) {
             routePos2d.push(ac.route[i][0], ac.route[i][1]);
@@ -87,12 +121,15 @@ var AircraftManager = (function () {
             polyline: {
                 positions: Cesium.Cartesian3.fromDegreesArray(routePos2d),
                 width: 3,
-                material: color.withAlpha(0.25),
+                material: new Cesium.PolylineDashMaterialProperty({
+                    color: color.withAlpha(0.35),
+                    dashLength: 16,
+                }),
                 clampToGround: true,
             },
         });
 
-        // 航线：空中轨迹（在飞行高度，细线，亮色）
+        // 航线：空中轨迹（实线亮色）
         var routePos3d = [];
         for (var j = 0; j < ac.route.length; j++) {
             routePos3d.push(ac.route[j][0], ac.route[j][1], ac.route[j][2]);
@@ -101,43 +138,19 @@ var AircraftManager = (function () {
             polyline: {
                 positions: Cesium.Cartesian3.fromDegreesArrayHeights(routePos3d),
                 width: 3,
-                material: color.withAlpha(0.6),
+                material: color.withAlpha(0.7),
                 clampToGround: false,
             },
         });
 
-        // 飞行器本体（扁平椭圆碟）
-        var entity = this.viewer.entities.add({
-            id: 'ac_' + ac.id,
-            position: Cesium.Cartesian3.fromDegrees(ac.currentLng, ac.currentLat, ac.currentAlt),
-            ellipsoid: {
-                radii: new Cesium.Cartesian3(12, 12, 3),
-                material: color.withAlpha(0.9),
-                outline: true,
-                outlineColor: Cesium.Color.WHITE.withAlpha(0.4),
-                outlineWidth: 1,
-            },
-            label: {
-                text: ac.callsign,
-                font: 'bold 13px "Microsoft YaHei", sans-serif',
-                fillColor: Cesium.Color.WHITE,
-                outlineColor: Cesium.Color.fromCssColorString('#1a1a2e'),
-                outlineWidth: 3,
-                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-                pixelOffset: new Cesium.Cartesian2(0, -28),
-                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 50000),
-                scale: 0.9,
-            },
         });
-        entity._acData = ac;
 
-        // 拖尾（简化：节流更新）
+        // 拖尾（节流更新）
         var trailEntity = this.viewer.entities.add({
             polyline: {
                 positions: Cesium.Cartesian3.fromDegreesArrayHeights([]),
                 width: 2,
-                material: color.withAlpha(0.3),
+                material: color.withAlpha(0.4),
                 clampToGround: false,
             },
         });
@@ -148,6 +161,42 @@ var AircraftManager = (function () {
         this.aircraft[ac.id].routeEntity = routeEntity;
         this.aircraft[ac.id].groundRoute = groundRoute;
         this.aircraft[ac.id].trailEntity = trailEntity;
+    };
+
+    // 生成发光圆形图标（Canvas → data URI）
+    AircraftManager.prototype._makeCircleIcon = function (colorHex) {
+        var key = '_icon_' + colorHex;
+        if (!AircraftManager._iconCache) AircraftManager._iconCache = {};
+        if (AircraftManager._iconCache[key]) return AircraftManager._iconCache[key];
+
+        var size = 64;
+        var canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        var ctx = canvas.getContext('2d');
+
+        var cx = size / 2, cy = size / 2;
+        // 外层光晕
+        var grad = ctx.createRadialGradient(cx, cy, size * 0.15, cx, cy, size * 0.48);
+        grad.addColorStop(0, colorHex);
+        grad.addColorStop(0.4, colorHex + 'CC');
+        grad.addColorStop(0.7, colorHex + '40');
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, size, size);
+
+        // 实心圆
+        ctx.beginPath();
+        ctx.arc(cx, cy, size * 0.22, 0, Math.PI * 2);
+        ctx.fillStyle = colorHex;
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        var uri = canvas.toDataURL();
+        AircraftManager._iconCache[key] = uri;
+        return uri;
+    };
     };
 
     // ============ 仿真 ============
