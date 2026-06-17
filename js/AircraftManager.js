@@ -353,6 +353,7 @@ var AircraftManager = (function () {
 
     AircraftManager.prototype._checkNoFlyZone = function (ac) {
         if (!this.noflyZones || this.noflyZones.length === 0) return;
+        var anyWarning = false;
         for (var i = 0; i < this.noflyZones.length; i++) {
             var z = this.noflyZones[i];
             var dLat = (ac.currentLat - z.lat) * 111000;
@@ -371,6 +372,8 @@ var AircraftManager = (function () {
                 }
                 ac.status = 'emergency';
             }
+            if (dist < z.r * 1.5) anyWarning = true;
+
             // 接近告警（1.5倍半径）
             if (dist < z.r * 1.5 && dist >= z.r) {
                 var warnKey = 'warn_' + key;
@@ -385,6 +388,10 @@ var AircraftManager = (function () {
                     }
                 }
             }
+        }
+        // 所有禁飞区都安全了，清除该飞行器的围栏告警
+        if (!anyWarning && this.alertSystem) {
+            this.alertSystem.clearByDrone(ac.id, 'fence');
         }
     };
 
@@ -422,6 +429,7 @@ var AircraftManager = (function () {
                     // 冲突解除
                     if (this._conflictPairs[pairKey]) {
                         delete this._conflictPairs[pairKey];
+                        if (this.alertSystem) this.alertSystem.clearByDrone(a.id, 'conflict');
                     }
                 }
             }

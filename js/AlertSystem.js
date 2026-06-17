@@ -7,7 +7,6 @@ var AlertSystem = (function () {
 
     var MAX_ALERTS = 50;
     var DISPLAY_COUNT = 15;
-    var ALERT_TTL_MS = 30000;    // 告警30秒后自动过期
 
     var LEVEL_COLORS = {
         'INFO': '#4488ff',
@@ -49,7 +48,6 @@ var AlertSystem = (function () {
 
         alert.id = 'alert_' + now + '_' + Math.random().toString(36).substr(2, 4);
         alert.time = new Date().toLocaleTimeString();
-        alert._ts = now;  // 记录创建时间用于过期清理
 
         this.alerts.unshift(alert);
         if (this.alerts.length > MAX_ALERTS) {
@@ -65,8 +63,7 @@ var AlertSystem = (function () {
     };
 
     AlertSystem.prototype.getAlertCount = function () {
-        var now = Date.now();
-        return this.alerts.filter(function (a) { return now - (a._ts || 0) < ALERT_TTL_MS; }).length;
+        return this.alerts.length;
     };
 
     AlertSystem.prototype.getActiveAlerts = function () {
@@ -76,12 +73,6 @@ var AlertSystem = (function () {
     };
 
     AlertSystem.prototype._renderAlerts = function () {
-        // 清理过期告警
-        var now = Date.now();
-        this.alerts = this.alerts.filter(function (a) {
-            return now - (a._ts || 0) < ALERT_TTL_MS;
-        });
-
         var panel = document.getElementById('alert-list');
         if (!panel) return;
 
@@ -109,6 +100,14 @@ var AlertSystem = (function () {
             el.textContent = this.alerts.length;
             el.style.color = active > 0 ? '#ff4444' : '#888';
         }
+    };
+
+    AlertSystem.prototype.clearByDrone = function (droneId, category) {
+        this.alerts = this.alerts.filter(function (a) {
+            return !(a.droneId === droneId && (!category || a.category === category));
+        });
+        this._renderAlerts();
+        this._updateStat();
     };
 
     AlertSystem.prototype.clear = function () {
