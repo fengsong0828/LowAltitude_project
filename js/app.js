@@ -104,6 +104,32 @@ function initCesium() {
         }
     }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
     h.setInputAction(function (cl) {
+        // 地图选点模式拦截
+        if (State.fpPickMode) {
+            var cartesian = v.camera.pickEllipsoid(cl.position, v.scene.globe.ellipsoid);
+            if (cartesian) {
+                var carto = Cesium.Cartographic.fromCartesian(cartesian);
+                var lng = Cesium.Math.toDegrees(carto.longitude);
+                var lat = Cesium.Math.toDegrees(carto.latitude);
+                if (State.fpPickMode === 'dep') {
+                    State.fpDepLng = lng; State.fpDepLat = lat;
+                    dom('fp-dep-lng').value = lng.toFixed(6);
+                    dom('fp-dep-lat').value = lat.toFixed(6);
+                    dom('fp-dep-text').textContent = lat.toFixed(4) + ', ' + lng.toFixed(4);
+                    _addPickMarker(lng, lat, '#00ff88', '起点');
+                } else if (State.fpPickMode === 'arr') {
+                    State.fpArrLng = lng; State.fpArrLat = lat;
+                    dom('fp-arr-lng').value = lng.toFixed(6);
+                    dom('fp-arr-lat').value = lat.toFixed(6);
+                    dom('fp-arr-text').textContent = lat.toFixed(4) + ', ' + lng.toFixed(4);
+                    _addPickMarker(lng, lat, '#ff4444', '终点');
+                }
+                State.fpPickMode = null;
+                dom('fp-pick-hint').style.display = 'none';
+            }
+            return;
+        }
+
         var p = v.scene.pick(cl.position);
         if (Cesium.defined(p) && p.id && p.id._bld) showTooltip(p.id._bld, cl.position);
         else if (Cesium.defined(p) && p.id && p.id._acData) {
@@ -275,22 +301,38 @@ function bindUIEvents() {
         var modal = document.getElementById('flightplan-modal');
         var overlay = document.getElementById('flightplan-overlay');
         if (modal) {
-            var bbox = State.tileManager.getCityBBox();
-            if (bbox) {
-                dom('fp-dep-lng').value = bbox.west.toFixed(4);
-                dom('fp-dep-lat').value = bbox.south.toFixed(4);
-                dom('fp-arr-lng').value = bbox.east.toFixed(4);
-                dom('fp-arr-lat').value = bbox.north.toFixed(4);
-            }
+            State.fpPickMode = null;
+            State.fpDepLng = null; State.fpDepLat = null;
+            State.fpArrLng = null; State.fpArrLat = null;
+            dom('fp-dep-lng').value = ''; dom('fp-dep-lat').value = '';
+            dom('fp-arr-lng').value = ''; dom('fp-arr-lat').value = '';
+            dom('fp-dep-text').textContent = '未选择';
+            dom('fp-arr-text').textContent = '未选择';
+            dom('fp-pick-hint').style.display = 'none';
             modal.style.display = 'block';
             if (overlay) overlay.style.display = 'block';
             dom('fp-result').textContent = '';
         }
     });
     dom('btn-fp-close').addEventListener('click', function () {
+        State.fpPickMode = null;
+        dom('fp-pick-hint').style.display = 'none';
+        _clearPickMarkers();
         document.getElementById('flightplan-modal').style.display = 'none';
         var overlay = document.getElementById('flightplan-overlay');
         if (overlay) overlay.style.display = 'none';
+    });
+    dom('btn-fp-pick-dep').addEventListener('click', function (e) {
+        e.stopPropagation();
+        State.fpPickMode = 'dep';
+        dom('fp-pick-hint').style.display = 'block';
+        dom('fp-pick-hint').textContent = '🖱 请在地图上点击选择【起点】...';
+    });
+    dom('btn-fp-pick-arr').addEventListener('click', function (e) {
+        e.stopPropagation();
+        State.fpPickMode = 'arr';
+        dom('fp-pick-hint').style.display = 'block';
+        dom('fp-pick-hint').textContent = '🖱 请在地图上点击选择【终点】...';
     });
     dom('btn-fp-submit').addEventListener('click', function () {
         if (!State.aircraftManager) return;
@@ -306,6 +348,9 @@ function bindUIEvents() {
         if (result.startsWith('ok:')) {
             dom('fp-result').innerHTML = '<span style="color:#0f0;">✓ 批准！新飞行器: ' + result.split(':')[1] + '</span>';
             setTimeout(function () {
+                State.fpPickMode = null;
+                dom('fp-pick-hint').style.display = 'none';
+                _clearPickMarkers();
                 document.getElementById('flightplan-modal').style.display = 'none';
                 var overlay = document.getElementById('flightplan-overlay');
                 if (overlay) overlay.style.display = 'none';
@@ -342,6 +387,25 @@ function showLoading(s, txt) {
     const o = dom('loadingOverlay');
     if (s) { o.style.display = 'block'; o.querySelector('.loading-text').textContent = txt || '加载中...'; }
     else o.style.display = 'none';
+}
+
+// 飞行计划选点标记
+function _addPickMarker(lng, lat, color, label) {
+    _clearPickMarkers();
+    var e = State.viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(lng, lat, 10),
+        point: { pixelSize: 14, color: Cesium.Color.fromCssColorString(color), outlineColor: Cesium.Color.WHITE, outlineWidth: 2 },
+        label: { text: label, font: 'bold 14px sans-serif', fillColor: Cesium.Color.fromCssColorString(color), outlineColor: Cesium.Color.BLACK, outlineWidth: 2, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -16) },
+    });
+    State._fpMarkers = [e];
+}
+function _clearPickMarkers() {
+    if (State._fpMarkers) {
+        for (var i = 0; i < State._fpMarkers.length; i++) {
+            State.viewer.entities.remove(State._fpMarkers[i]);
+        }
+        State._fpMarkers = [];
+    }
 }
 
 // ============ 渲染循环 ============

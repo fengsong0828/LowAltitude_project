@@ -144,12 +144,31 @@
 
     <!-- 飞行计划模态框 -->
     <div id="flightplan-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:998;background:rgba(0,0,0,0.5);"></div>
-    <div id="flightplan-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;background:rgba(15,25,40,0.95);border:1px solid rgba(0,212,255,0.3);border-radius:10px;padding:16px;width:320px;color:#e0e8f0;">
+    <div id="flightplan-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;background:rgba(15,25,40,0.95);border:1px solid rgba(0,212,255,0.3);border-radius:10px;padding:16px;width:340px;color:#e0e8f0;">
         <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:#00d4ff;">提交飞行计划</div>
-        <div class="ctrl-row"><label>出发经度</label><input id="fp-dep-lng" type="text" style="width:140px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;" placeholder="116.39"></div>
-        <div class="ctrl-row"><label>出发纬度</label><input id="fp-dep-lat" type="text" style="width:140px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;" placeholder="39.93"></div>
-        <div class="ctrl-row"><label>目的经度</label><input id="fp-arr-lng" type="text" style="width:140px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;" placeholder="116.43"></div>
-        <div class="ctrl-row"><label>目的纬度</label><input id="fp-arr-lat" type="text" style="width:140px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;" placeholder="39.97"></div>
+        <div id="fp-pick-hint" style="font-size:11px;color:#ffaa00;margin-bottom:6px;display:none;">🖱 请在地图上点击选择位置...</div>
+        <div class="ctrl-row" style="margin-bottom:4px;">
+            <label>起点</label>
+            <span style="flex:1;text-align:right;">
+                <span id="fp-dep-text" style="color:#888;font-size:11px;">未选择</span>
+                <button class="btn btn-primary btn-sm" id="btn-fp-pick-dep" style="padding:2px 8px;font-size:10px;margin-left:4px;">选点</button>
+            </span>
+        </div>
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+            <input id="fp-dep-lng" type="text" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:11px;" placeholder="经度" readonly>
+            <input id="fp-dep-lat" type="text" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:11px;" placeholder="纬度" readonly>
+        </div>
+        <div class="ctrl-row" style="margin-bottom:4px;">
+            <label>终点</label>
+            <span style="flex:1;text-align:right;">
+                <span id="fp-arr-text" style="color:#888;font-size:11px;">未选择</span>
+                <button class="btn btn-primary btn-sm" id="btn-fp-pick-arr" style="padding:2px 8px;font-size:10px;margin-left:4px;">选点</button>
+            </span>
+        </div>
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+            <input id="fp-arr-lng" type="text" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:11px;" placeholder="经度" readonly>
+            <input id="fp-arr-lat" type="text" style="flex:1;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:11px;" placeholder="纬度" readonly>
+        </div>
         <div id="fp-result" style="margin:8px 0;font-size:11px;"></div>
         <div style="display:flex;gap:6px;">
             <button class="btn btn-primary btn-sm" id="btn-fp-submit" style="flex:1;">提交评估</button>
