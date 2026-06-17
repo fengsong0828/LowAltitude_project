@@ -7,6 +7,7 @@ var AlertSystem = (function () {
 
     var MAX_ALERTS = 50;
     var DISPLAY_COUNT = 15;
+    var ALERT_TTL_MS = 30000;    // 告警30秒后自动过期
 
     var LEVEL_COLORS = {
         'INFO': '#4488ff',
@@ -39,7 +40,6 @@ var AlertSystem = (function () {
     }
 
     AlertSystem.prototype.addAlert = function (alert) {
-        // 去重：同一飞行器+同类告警1秒内不重复
         var key = alert.droneId + '_' + alert.category + '_' + alert.level;
         var now = Date.now();
         if (this.dedupKeys[key] && now - this.dedupKeys[key] < 1000) {
@@ -49,6 +49,7 @@ var AlertSystem = (function () {
 
         alert.id = 'alert_' + now + '_' + Math.random().toString(36).substr(2, 4);
         alert.time = new Date().toLocaleTimeString();
+        alert._ts = now;  // 记录创建时间用于过期清理
 
         this.alerts.unshift(alert);
         if (this.alerts.length > MAX_ALERTS) {
@@ -64,7 +65,8 @@ var AlertSystem = (function () {
     };
 
     AlertSystem.prototype.getAlertCount = function () {
-        return this.alerts.length;
+        var now = Date.now();
+        return this.alerts.filter(function (a) { return now - (a._ts || 0) < ALERT_TTL_MS; }).length;
     };
 
     AlertSystem.prototype.getActiveAlerts = function () {
@@ -74,6 +76,12 @@ var AlertSystem = (function () {
     };
 
     AlertSystem.prototype._renderAlerts = function () {
+        // 清理过期告警
+        var now = Date.now();
+        this.alerts = this.alerts.filter(function (a) {
+            return now - (a._ts || 0) < ALERT_TTL_MS;
+        });
+
         var panel = document.getElementById('alert-list');
         if (!panel) return;
 
