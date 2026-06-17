@@ -147,17 +147,20 @@ var AircraftManager = (function () {
     };
 
     AircraftManager.prototype._updateAll = function (dt) {
-        var changed = false;
         for (var i = 0; i < this.aircraftList.length; i++) {
             var ac = this.aircraftList[i];
             if (ac.moving && ac.route && ac.route.length >= 2) {
                 this._moveAircraft(ac, dt);
-                changed = true;
             }
             this._updateBattery(ac, dt);
             this._updateTrail(ac);
         }
-        if (changed) this._updatePanel();
+        // 节流：最多每 500ms 刷新一次面板
+        var now = Date.now();
+        if (!this._lastPanelUpdate || now - this._lastPanelUpdate > 500) {
+            this._updatePanel();
+            this._lastPanelUpdate = now;
+        }
     };
 
     AircraftManager.prototype._moveAircraft = function (ac, dt) {
@@ -279,7 +282,7 @@ var AircraftManager = (function () {
             if (e.trailEntity) this.viewer.entities.remove(e.trailEntity);
         }
         this.aircraft = {}; this.aircraftList = []; this.selectedId = null;
-        var p = document.getElementById('fleet-list'); if (p) p.innerHTML = '';
+        var p = document.getElementById('fleet-list'); if (p) p.innerHTML = '<div class="fp-empty">请选择城市</div>';
         var d = document.getElementById('ac-detail'); if (d) d.innerHTML = '<div class="ac-detail-empty">点击飞行器查看详情</div>';
         if (this.cameraView) this.cameraView.hide();
     };

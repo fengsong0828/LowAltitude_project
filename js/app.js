@@ -131,9 +131,8 @@ async function switchCity(key) {
     try {
         await State.tileManager.switchCity(key);
 
-        // v2.0: 加载飞行器（在 flyTo 之前，确保立即可见）
+        // v2.0: 加载飞行器（loadCity 内部已 clear）
         if (State.aircraftManager) {
-            State.aircraftManager.clear();
             await State.aircraftManager.loadCity(key);
         }
         setupNoFlyZones();
@@ -173,16 +172,6 @@ function clearScene() {
     State.vegetationEntities = [];
     for (const e of State.noflyEntities) v.entities.remove(e);
     State.noflyEntities = [];
-}
-
-function applyVisibility() {
-    if (State.tileManager) {
-        State.tileManager.setLayerVisibility('buildings', State.showBuildings);
-        State.tileManager.setLayerVisibility('water', State.showWater);
-        State.tileManager.setLayerVisibility('roads', State.showRoads);
-        State.tileManager.setLayerVisibility('vegetation', State.showVegetation);
-    }
-    for (const e of State.noflyEntities) e.show = State.showNoFly;
 }
 
 function applyVisibility() {
