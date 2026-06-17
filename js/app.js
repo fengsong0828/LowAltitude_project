@@ -85,7 +85,7 @@ function initCesium() {
     v.imageryLayers.lowerToBottom(v.imageryLayers.get(v.imageryLayers.length - 1));
 
     // 地球外观 — 开启光照使地形有立体感
-    v.scene.globe.enableLighting = true;
+    v.scene.globe.enableLighting = false;
     v.scene.globe.showGroundAtmosphere = true;
     v.scene.skyAtmosphere.brightnessShift = 0.15;
 
