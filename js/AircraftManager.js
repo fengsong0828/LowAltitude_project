@@ -26,6 +26,7 @@ var AircraftManager = (function () {
 
     // ============ 加载 ============
     AircraftManager.prototype.loadCity = async function (cityKey) {
+        this.clear();
         this.cityKey = cityKey;
         this._debug('loading: ' + cityKey);
 
