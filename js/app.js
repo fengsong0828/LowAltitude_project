@@ -18,7 +18,6 @@ const CITIES = {
 // ============ 配置 ============
 const CONFIG = {
     terrainUrl: 'http://localhost:8080/terrain/',
-    defaultPatrolSpeed: 10,
     buildingColors: { 60:'#1a1a2e', 40:'#2c3e6b', 25:'#3a7ca5', 15:'#6baed6', 8:'#bdd7ee', 0:'#deebf7' },
     roadStyles: {
         motorway: { color: '#ff6d00', width: 6 }, trunk: { color: '#ff9100', width: 5 },
@@ -33,27 +32,23 @@ const State = {
     currentCity: null,
     // 瓦片管理器
     tileManager: null,
+    // v2.0 飞行器管理
+    aircraftManager: null,
+    alertSystem: null,
+    cameraView: null,
     // 建筑/水体/道路/植被 entities（由 TileManager 管理）
     buildingEntities: [],
     waterEntities: [],
     roadEntities: [],
     vegetationEntities: [],
-    // 巡逻
-    droneEntity: null,
-    dronePath: null,
-    waypointEntities: [],
+    // 禁飞区
     noflyEntities: [],
-    patrolRoutes: [],
-    activeRouteIndex: 0,
-    isPatrolPlaying: false,
-    patrolSpeed: CONFIG.defaultPatrolSpeed,
-    animationStartTime: null,
     // 图层可见性
     showBuildings: true,
     showWater: true,
     showRoads: true,
     showVegetation: true,
-    showPatrol: false,
+    showAircraft: true,
     showNoFly: false,
     showTerrain: false,
     isSwitching: false,
@@ -111,6 +106,12 @@ function initCesium() {
     h.setInputAction(function (cl) {
         var p = v.scene.pick(cl.position);
         if (Cesium.defined(p) && p.id && p.id._bld) showTooltip(p.id._bld, cl.position);
+        else if (Cesium.defined(p) && p.id && p.id._acData) {
+            // v2.0: 点击飞行器
+            if (State.aircraftManager) {
+                State.aircraftManager.handleClick(p.id);
+            }
+        }
         else hideTooltip();
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
     v.camera.changed.addEventListener(updateStatusBar);
@@ -131,7 +132,10 @@ async function switchCity(key) {
     try {
         await State.tileManager.switchCity(key);
 
-        setupPatrolRoutes();
+        // v2.0: 加载飞行器
+        if (State.aircraftManager) {
+            State.aircraftManager.clear();
+        }
         setupNoFlyZones();
         updateCityUI(key);
         applyVisibility();
@@ -143,6 +147,10 @@ async function switchCity(key) {
             duration: 2.5,
             complete: function () {
                 State.tileManager.forceUpdate();
+                // 飞行器在城市加载完成后激活
+                if (State.aircraftManager) {
+                    State.aircraftManager.loadCity(key);
+                }
             },
         });
 
@@ -154,12 +162,11 @@ async function switchCity(key) {
 
     State.isSwitching = false;
     showLoading(false);
-    console.log('[City]', city.name, '就绪 (瓦片模式)');
+    console.log('[City]', city.name, '就绪 (v2.0 飞行器管理)');
 }
 
 function clearScene() {
     const v = State.viewer;
-    // TileManager 的瓦片数据在 switchCity 时已被清理
     for (const e of State.buildingEntities) v.entities.remove(e);
     State.buildingEntities = [];
     for (const e of State.waterEntities) v.entities.remove(e);
@@ -168,12 +175,8 @@ function clearScene() {
     State.roadEntities = [];
     for (const e of State.vegetationEntities) v.entities.remove(e);
     State.vegetationEntities = [];
-    for (const e of State.waypointEntities) v.entities.remove(e);
-    State.waypointEntities = [];
     for (const e of State.noflyEntities) v.entities.remove(e);
     State.noflyEntities = [];
-    if (State.droneEntity) { v.entities.remove(State.droneEntity); State.droneEntity = null; }
-    if (State.dronePath) { v.entities.remove(State.dronePath); State.dronePath = null; }
 }
 
 function applyVisibility() {
@@ -183,76 +186,17 @@ function applyVisibility() {
         State.tileManager.setLayerVisibility('roads', State.showRoads);
         State.tileManager.setLayerVisibility('vegetation', State.showVegetation);
     }
-    if (State.dronePath) State.dronePath.show = State.showPatrol;
-    if (State.droneEntity) State.droneEntity.show = State.showPatrol;
-    for (const e of State.waypointEntities) e.show = State.showPatrol;
     for (const e of State.noflyEntities) e.show = State.showNoFly;
 }
 
-// ============ 巡逻路线 ============
-function setupPatrolRoutes() {
-    const b = State.tileManager.getCityBBox();
-    if (!b) return;
-    const cx = (b.west + b.east) / 2, cy = (b.south + b.north) / 2;
-    const r = Math.max(b.east - b.west, b.north - b.south) * 0.5;
-
-    const r1 = [];
-    for (let i = 0; i <= 20; i++) {
-        const a = (i / 20) * Math.PI * 2;
-        r1.push({ lon: cx + Math.cos(a) * r, lat: cy + Math.sin(a) * r * 0.7,
-                  alt: 150 + Math.sin(i * 0.5) * 30, name: i === 0 ? '起点' : 'WP' + i });
+function applyVisibility() {
+    if (State.tileManager) {
+        State.tileManager.setLayerVisibility('buildings', State.showBuildings);
+        State.tileManager.setLayerVisibility('water', State.showWater);
+        State.tileManager.setLayerVisibility('roads', State.showRoads);
+        State.tileManager.setLayerVisibility('vegetation', State.showVegetation);
     }
-    const r2 = [];
-    for (let row = 0; row < 5; row++) {
-        const t = row / 4, lat = b.south + t * (b.north - b.south);
-        const l0 = row % 2 === 0 ? b.west + r * 0.1 : b.east - r * 0.1;
-        const l1 = row % 2 === 0 ? b.east - r * 0.1 : b.west + r * 0.1;
-        for (let p = 0; p <= 4; p++) r2.push({ lon: l0 + (l1 - l0) * (p / 4), lat, alt: 130 + (row % 3) * 20, name: 'S' + row + '-' + p });
-    }
-    State.patrolRoutes = [
-        { id: 'route1', name: '环形巡逻', color: '#00ff88', points: r1 },
-        { id: 'route2', name: '网格扫描', color: '#ff9100', points: r2 },
-    ];
-    State.activeRouteIndex = 0;
-    renderPatrolRoute(0);
-    createDrone();
-}
-
-function renderPatrolRoute(idx) {
-    for (const w of State.waypointEntities) State.viewer.entities.remove(w);
-    State.waypointEntities = [];
-    if (State.dronePath) { State.viewer.entities.remove(State.dronePath); State.dronePath = null; }
-    const rt = State.patrolRoutes[idx];
-    if (!rt) return;
-    const pos = []; for (const p of rt.points) pos.push(p.lon, p.lat, p.alt);
-    State.dronePath = State.viewer.entities.add({
-        polyline: {
-            positions: Cesium.Cartesian3.fromDegreesArrayHeights(pos), width: 3,
-            material: new Cesium.PolylineGlowMaterialProperty({ glowPower: 0.25, color: Cesium.Color.fromCssColorString(rt.color) }),
-            clampToGround: false,
-        },
-    });
-    for (const p of rt.points) {
-        if (p.name) State.waypointEntities.push(State.viewer.entities.add({
-            position: Cesium.Cartesian3.fromDegrees(p.lon, p.lat, p.alt + 5),
-            point: { pixelSize: 6, color: Cesium.Color.fromCssColorString(rt.color), outlineColor: Cesium.Color.WHITE, outlineWidth: 1 },
-            label: { text: p.name, font: '11px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.BLACK, outlineWidth: 2, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -10), distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 3000) },
-        }));
-    }
-    dom('route-name').textContent = CITIES[State.currentCity].name + ' - ' + rt.name;
-    applyVisibility();
-}
-
-function createDrone() {
-    if (State.droneEntity) { State.viewer.entities.remove(State.droneEntity); State.droneEntity = null; }
-    const rt = State.patrolRoutes[State.activeRouteIndex];
-    if (!rt || !rt.points.length) return;
-    const pt = rt.points[0];
-    State.droneEntity = State.viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(pt.lon, pt.lat, pt.alt),
-        ellipsoid: { radii: new Cesium.Cartesian3(3, 3, 0.5), material: Cesium.Color.fromCssColorString('#ff6600').withAlpha(0.9), outline: true, outlineColor: Cesium.Color.WHITE, outlineWidth: 1 },
-        label: { text: '巡检无人机', font: '12px sans-serif', fillColor: Cesium.Color.WHITE, outlineColor: Cesium.Color.fromCssColorString('#ff3d00'), outlineWidth: 2, style: Cesium.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, pixelOffset: new Cesium.Cartesian2(0, -20), distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 8000) },
-    });
+    for (const e of State.noflyEntities) e.show = State.showNoFly;
 }
 
 // ============ 禁飞区 ============
@@ -274,48 +218,23 @@ function setupNoFlyZones() {
     applyVisibility();
 }
 
-// ============ 飞行模拟 ============
-function startPatrol() {
-    if (!State.patrolRoutes[State.activeRouteIndex]) return;
-    State.isPatrolPlaying = true;
-    State.animationStartTime = State.viewer.clock.currentTime.clone();
-    dom('btn-play').textContent = '暂停';
-    dom('btn-play').className = 'btn btn-warning btn-sm';
-}
-function stopPatrol() {
-    State.isPatrolPlaying = false;
-    dom('btn-play').textContent = '开始';
-    dom('btn-play').className = 'btn btn-success btn-sm';
-}
-
-function updateDronePosition() {
-    if (!State.isPatrolPlaying || !State.droneEntity) return;
-    const rt = State.patrolRoutes[State.activeRouteIndex];
-    if (!rt || rt.points.length < 2) return;
-    const elapsed = Cesium.JulianDate.secondsDifference(State.viewer.clock.currentTime, State.animationStartTime);
-    let total = 0; const segs = [];
-    for (let i = 1; i < rt.points.length; i++) {
-        const p = rt.points[i], prev = rt.points[i - 1];
-        const dl = (p.lon - prev.lon) * Math.cos((p.lat + prev.lat) / 2 * Math.PI / 180);
-        segs.push(Math.sqrt(dl * dl + (p.lat - prev.lat) * (p.lat - prev.lat)) * 111000);
-        total += segs[segs.length - 1];
-    }
-    const spd = State.patrolSpeed, pd = (elapsed * spd * 111) % total;
-    let td = 0, si = 0;
-    for (let i = 0; i < segs.length; i++) { if (td + segs[i] > pd) { si = i; break; } td += segs[i]; }
-    const t = segs[si] > 0 ? Math.max(0, Math.min(1, (pd - td) / segs[si])) : 0;
-    const p0 = rt.points[si], p1 = rt.points[si + 1] || rt.points[0];
-    State.droneEntity.position = Cesium.Cartesian3.fromDegrees(p0.lon + (p1.lon - p0.lon) * t, p0.lat + (p1.lat - p0.lat) * t, p0.alt + (p1.alt - p0.alt) * t);
-    dom('stat-speed').textContent = spd + ' m/s';
-}
-
 // ============ UI ============
 function bindUIEvents() {
     dom('toggle-buildings').addEventListener('change', function () { State.showBuildings = this.checked; applyVisibility(); });
     dom('toggle-water').addEventListener('change', function () { State.showWater = this.checked; applyVisibility(); });
     dom('toggle-roads').addEventListener('change', function () { State.showRoads = this.checked; applyVisibility(); });
     dom('toggle-vegetation').addEventListener('change', function () { State.showVegetation = this.checked; applyVisibility(); });
-    dom('toggle-patrol').addEventListener('change', function () { State.showPatrol = this.checked; applyVisibility(); });
+    dom('toggle-aircraft').addEventListener('change', function () {
+        State.showAircraft = this.checked;
+        if (State.aircraftManager) {
+            var entries = State.aircraftManager.aircraft;
+            for (var id in entries) {
+                if (entries.hasOwnProperty(id) && entries[id].entity) {
+                    entries[id].entity.show = State.showAircraft;
+                }
+            }
+        }
+    });
     dom('toggle-nofly').addEventListener('change', function () { State.showNoFly = this.checked; applyVisibility(); });
     dom('toggle-terrain').addEventListener('change', function () {
         State.showTerrain = this.checked;
@@ -323,18 +242,9 @@ function bindUIEvents() {
             ? new Cesium.CesiumTerrainProvider({ url: CONFIG.terrainUrl, requestVertexNormals: false, requestWaterMask: false })
             : new Cesium.EllipsoidTerrainProvider();
     });
-    dom('select-route').addEventListener('change', function () {
-        State.activeRouteIndex = parseInt(this.value);
-        stopPatrol(); renderPatrolRoute(State.activeRouteIndex); createDrone();
-    });
-    dom('btn-play').addEventListener('click', function () { State.isPatrolPlaying ? stopPatrol() : startPatrol(); });
-    dom('btn-reset').addEventListener('click', function () { stopPatrol(); createDrone(); });
-    dom('speed-slider').addEventListener('input', function () {
-        State.patrolSpeed = parseInt(this.value);
-        dom('speed-value').textContent = State.patrolSpeed + ' m/s';
-    });
     dom('btn-flyto').addEventListener('click', function () {
-        const c = CITIES[State.currentCity].center;
+        var c = CITIES[State.currentCity] && CITIES[State.currentCity].center;
+        if (!c) return;
         State.viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(c.lon, c.lat, c.alt), orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-90), roll: 0 }, duration: 1.2 });
     });
     document.querySelectorAll('.city-btn').forEach(function (b) {
@@ -354,7 +264,6 @@ function updateStatusBar() {
     const v = State.viewer;
     if (!v.camera.position) return;
     dom('stat-altitude').textContent = Cesium.Cartographic.fromCartesian(v.camera.position).height.toFixed(0) + ' m';
-    if (!State.isPatrolPlaying) dom('stat-speed').textContent = '0 m/s';
 }
 function showTooltip(p, pos) {
     const tt = dom('tooltip');
@@ -370,10 +279,9 @@ function showLoading(s, txt) {
 
 // ============ 渲染循环 ============
 function startRenderLoop() {
-    State.viewer.clock.onTick.addEventListener(function () { if (State.isPatrolPlaying) updateDronePosition(); });
-    let t = performance.now(), c = 0;
+    var t = performance.now(), c = 0;
     State.viewer.scene.preRender.addEventListener(function () { c++; });
-    setInterval(function () { const n = performance.now(), e = n - t; dom('stat-fps').textContent = (e > 0 ? Math.round(c * 1000 / e) : 0) + ' fps'; t = n; c = 0; }, 1000);
+    setInterval(function () { var n = performance.now(), e = n - t; dom('stat-fps').textContent = (e > 0 ? Math.round(c * 1000 / e) : 0) + ' fps'; t = n; c = 0; }, 1000);
 }
 
 // ============ 主入口 ============
@@ -391,6 +299,21 @@ async function main() {
         });
         console.log('[TileManager] 已初始化');
 
+        // v2.0: 初始化飞行器管理模块
+        State.alertSystem = new AlertSystem();
+        State.cameraView = new CameraView();
+        State.aircraftManager = new AircraftManager(State.viewer, State, State.alertSystem, State.cameraView);
+        console.log('[Aircraft] v2.0 模块已就绪');
+
+        // 飞行器面板点击事件
+        document.getElementById('fleet-list').addEventListener('click', function (e) {
+            var item = e.target.closest('.fleet-item');
+            if (item && State.aircraftManager) {
+                var id = item.getAttribute('data-acid');
+                State.aircraftManager.selectAircraft(id);
+            }
+        });
+
         var v = State.viewer;
         // 从太空远眺完整地球，缓缓转向中国方向
         v.camera.flyTo({
@@ -401,8 +324,7 @@ async function main() {
 
         showLoading(false);
 
-        State.showPatrol = false; State.showNoFly = false;
-        dom('toggle-patrol').checked = false;
+        State.showNoFly = false;
         dom('toggle-nofly').checked = false;
         applyVisibility();
     } catch (e) { console.error(e); showLoading(true, '错误: ' + e.message); }

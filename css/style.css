@@ -327,13 +327,81 @@ html, body {
     pointer-events: auto;
 }
 @media (max-width: 768px) {
-    #panel {
-        width: 240px;
-        right: 6px;
-        top: 50px;
-    }
-    #statusBar {
-        font-size: 10px;
-        gap: 10px;
-    }
+    #panel { width: 240px; right: 6px; top: 50px; }
+    #statusBar { font-size: 10px; gap: 10px; }
+    #fleet-panel { display: none; }
+    #right-panels { right: 4px; width: 200px; }
+    #camera-view { right: 10px; bottom: 40px; width: 260px; }
 }
+
+/* ============================================
+   v2.0: 低空飞行器管理平台新增样式
+   ============================================ */
+
+.title-stats { font-size: 12px; color: #888; margin-left: 16px; padding: 2px 8px; background: rgba(255,255,255,0.06); border-radius: 4px; }
+
+#right-panels { position: absolute; right: 8px; top: 52px; width: 240px; z-index: 99; display: flex; flex-direction: column; gap: 6px; max-height: calc(100vh - 80px); }
+#right-panels .rp-section { background: rgba(15,20,35,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden; }
+#right-panels .panel-header { font-size: 12px; padding: 8px 12px; background: rgba(255,255,255,0.05); color: #e0e8f0; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; }
+#right-panels .panel-body { padding: 8px 10px; font-size: 11px; }
+
+.alert-count-badge { background: rgba(255,60,60,0.25); color: #ff6666; font-size: 11px; padding: 1px 6px; border-radius: 8px; font-weight: bold; }
+#alert-panel { max-height: 280px; }
+.alert-scroll { max-height: 240px; overflow-y: auto; padding: 4px 8px; }
+.alert-scroll::-webkit-scrollbar { width: 4px; }
+.alert-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.alert-empty { text-align: center; color: #555; padding: 20px; font-size: 12px; }
+.alert-item { display: flex; align-items: flex-start; gap: 6px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 11px; }
+.alert-badge { font-size: 10px; padding: 1px 5px; border-radius: 3px; color: #fff; white-space: nowrap; flex-shrink: 0; margin-top: 1px; }
+.alert-text { flex: 1; min-width: 0; }
+.alert-msg { color: #ccc; word-break: break-all; display: block; }
+.alert-time { color: #555; font-size: 10px; }
+
+#fleet-panel { position: absolute; left: 8px; top: 52px; width: 240px; max-height: calc(100vh - 80px); z-index: 99; background: rgba(15,20,35,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; display: flex; flex-direction: column; overflow: hidden; }
+.fp-header { font-size: 12px; padding: 8px 12px; background: rgba(255,255,255,0.05); color: #e0e8f0; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; }
+.fp-stats { color: #00d4ff; font-size: 11px; }
+.fp-list { flex: 1; overflow-y: auto; padding: 4px 6px; min-height: 0; max-height: 300px; }
+.fp-list::-webkit-scrollbar { width: 4px; }
+.fp-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.fp-empty { text-align: center; color: #555; padding: 20px; font-size: 12px; }
+
+.fleet-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s; margin-bottom: 2px; }
+.fleet-item:hover { background: rgba(255,255,255,0.06); }
+.fleet-selected { background: rgba(0,212,255,0.12); }
+.fleet-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.fleet-info { flex: 1; min-width: 0; }
+.fleet-name { color: #e0e8f0; font-size: 12px; font-weight: 500; }
+.fleet-type { color: #777; font-size: 10px; }
+.fleet-battery { text-align: right; font-size: 11px; flex-shrink: 0; }
+.fleet-bar { width: 40px; height: 3px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 3px; overflow: hidden; }
+.fleet-bar-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+
+.fp-detail { border-top: 1px solid rgba(255,255,255,0.08); padding: 8px 10px; font-size: 11px; min-height: 80px; }
+.ac-detail-empty { text-align: center; color: #555; padding: 10px; font-size: 11px; }
+.ac-detail-header { font-size: 13px; color: #e0e8f0; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.ac-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.ac-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin-bottom: 6px; }
+.ac-detail-grid div { display: flex; justify-content: space-between; color: #aaa; }
+.ac-detail-grid div span:first-child { color: #777; }
+.ac-detail-bar { width: 100%; height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; }
+.ac-battery-fill { height: 100%; border-radius: 2px; transition: width 0.5s; }
+
+.ctrl-group { margin-bottom: 4px; }
+.ctrl-row { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; color: #aaa; font-size: 11px; }
+.ctrl-row input[type="checkbox"] { width: 14px; height: 14px; cursor: pointer; accent-color: #00d4ff; }
+
+.btn { border: none; border-radius: 6px; cursor: pointer; font-size: 12px; padding: 6px 12px; transition: opacity 0.15s; }
+.btn:hover { opacity: 0.85; }
+.btn-primary { background: #00d4ff; color: #000; }
+.btn-primary.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+#camera-view { position: absolute; bottom: 40px; right: 260px; width: 330px; background: rgba(10,15,25,0.95); border: 1px solid rgba(0,212,255,0.3); border-radius: 8px; overflow: hidden; z-index: 200; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+.cv-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; background: rgba(0,212,255,0.1); font-size: 11px; }
+.cv-title { color: #00d4ff; }
+.cv-close { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 4px; }
+.cv-close:hover { color: #fff; }
+.cv-footer { padding: 3px 10px; font-size: 10px; color: #666; text-align: center; background: rgba(0,0,0,0.3); }
+#cv-canvas { display: block; width: 100%; height: 220px; object-fit: contain; background: #0a0f19; }
+
+@keyframes alert-pulse { 0%,100% { border-color: rgba(255,0,0,0.3); } 50% { border-color: rgba(255,0,0,0.7); } }
+.alert-active { animation: alert-pulse 2s infinite; }
