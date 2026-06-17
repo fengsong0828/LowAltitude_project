@@ -128,8 +128,8 @@ var AircraftManager = (function () {
                     }
                     return Cesium.Cartesian3.fromDegreesArrayHeights(pts);
                 }, false),
-                width: 2,
-                material: color.withAlpha(0.35),
+                width: 3,
+                material: color.withAlpha(0.5),
                 clampToGround: false,
             },
         });
