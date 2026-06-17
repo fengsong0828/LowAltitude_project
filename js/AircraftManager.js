@@ -229,6 +229,7 @@ var AircraftManager = (function () {
 
         this.selectedId = id;
         this._showDetail(ac);
+        this._updatePanel(); // 立即刷新高亮
 
         // 打开摄像头弹窗
         if (this.cameraView) {
@@ -302,7 +303,7 @@ var AircraftManager = (function () {
                 '</div>' +
                 '</div>';
         }
-        panel.innerHTML = html;
+        panel.innerHTML = html || '<div class="fp-empty">暂无飞行器</div>';
 
         // 统计
         var online = this.aircraftList.length;
