@@ -187,6 +187,21 @@ class MapRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
             return
+
+        # 上次选择城市
+        if self.path == "/api/last-city":
+            path = os.path.join(PROJECT_DIR, "data", "last_city.txt")
+            city = "beijing"
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    city = f.read().strip()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            data = json.dumps({"city": city}).encode("utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
         # 本地图块服务（data/imagery/{z}/{x}/{y}.png）
         if self.path.startswith("/imagery/"):
             img_path = os.path.join(IMAGERY_DIR, self.path[len("/imagery/"):])
@@ -274,6 +289,16 @@ class MapRequestHandler(http.server.SimpleHTTPRequestHandler):
                 f.write(body)
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"ok":true}')
+            return
+
+        # 保存上次城市
+        if self.path == "/api/last-city":
+            path = os.path.join(PROJECT_DIR, "data", "last_city.txt")
+            with open(path, "w") as f:
+                f.write(body.decode("utf-8").strip())
+            self.send_response(200)
             self.end_headers()
             self.wfile.write(b'{"ok":true}')
             return
