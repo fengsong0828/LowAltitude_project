@@ -1,0 +1,25 @@
+# 依赖
+node_modules/
+
+# 大型数据文件（通过脚本下载）
+data/srtm/
+data/cities/
+data/tiles/
+data/imagery/
+data/patrol/
+data/buildings.geojson
+
+# 日志
+server.log
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# 系统
+.DS_Store
+Thumbs.db
+*.tmp

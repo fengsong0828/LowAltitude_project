@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+<title>易景三维场景在线开发-3d城市开发-场景开发平台|易景三维场景</title>
+<meta name="keywords" content="易景三维场景在线开发,可视化场景,3d城市开发,室内三维场景开发,场景开发平台,ESMap" />
+<meta name="description" content="易景三维场景在线开发,可视化场景,3d城市开发,室内三维场景开发,场景开发平台,易景城市三维场景(3D城市)、室内三维可视化引擎(室内3D场景)提供场景平台,通过场景编辑器可以制作3D城市模型场景和室内三维场景，结合自研的多源数据定位算法，快速实现微信小程序室内定位、室内导航、浏览、缩放、旋转、全景等基础功能；"/>
+<meta charset="UTF-8">
+<style type="text/css">
+    html,body{
+        padding: 0;
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+    #map-container{
+        width: 100%;
+        height: 100%;
+    }
+</style>
+</head>
+<body>
+<div id="map-container"></div>
+</body>
+
+<script src="https://www.esmap.cn/escopemap/plug-in/esmap/esmap-3.0.min.js"></script>
+<script src="https://www.esmap.cn/escopemap/plug-in/esmap/esplugin-tile-3.0.min.js"></script>
+<script src="https://www.esmap.cn/escopemap/plug-in/jquery/jquery-2.1.4.min.js"></script>
+
+<script type="text/javascript">
+    var map = null;
+    var defaultOpt = {
+        mapDataUrl: 'https://www.esmap.cn/EsmapTileData/',
+        mapThemeUrl: 'https://www.esmap.cn/worldtheme/',
+    };
+    var floorControl = null;
+    $(function () {
+        map = new esmap.ESMap({
+            mode: esmap.MapMode.City,
+            container: document.getElementById('map-container'), //渲染dom
+            tileType: 'autonavi', // 高德瓦片场景
+            token: 'escope356311',//场景token
+            mapDataSrc: defaultOpt.mapDataUrl,
+            mapThemeSrc: defaultOpt.mapThemeUrl,
+            maximumTiles: 64, // 可视域最大加载瓦片建筑数量，电脑显卡性能好可配置为256
+            isShowWater: true, // 是否应用瓦片水域特效
+            loadRoads: false, // 是否加载路网
+            clickOpenBuildings: true, // 是否开启室内三维场景展开
+        });
+
+        // 初始化场景特效【特效引擎需要显卡支持：最低 GTX950，推荐 GTX1050 及以上，显存 2G 及以上】
+        esmap.ESEffectTool.init({
+            loadRoads: false, // 是否加载特效主题的路网特效
+            isSetRoomEffect: true, // 是否设置瓦片建筑特效
+            isShowSkybox: true
+        });
+
+        // 初始化场景瓦片
+        esmap.ESTileMap.init({
+            scaleLevel: 16, // 场景默认初始化缩放等级
+            scaleLevelAnimate: false, // 场景初始化后层级变化动画, { targetLevel(目标缩放层级), duration(过渡时间) }
+            openTileClick: false, // 是否开瓦片场景点击
+            isShowWater: false, // 是否应用瓦片水域特效
+        });
+
+        // 特效包初始化完成
+        map.on('effectsInitComplete', function (data) {
+            // 特效标注相关的处理需要确保在特效初始化完成后执行
+            effectLayer = new esmap.ESEffectTool.EffectLayer('line', esmap.ESLayer.EFFECT_MARKER);
+            esmap.ESEffectTool.addLayerToMap(effectLayer);
+
+            // clearAll();
+        })
+
+        map.openMapById('D2026616601618');
+        map.showCompass = true;//指北针
+        map.showScaler = true;//显示场景比例尺
+
+        // 场景初始化完成事件
+        map.on('loadComplete', function () {
+            // 初始化楼层控件
+            var ctlOpt = new esmap.ESControlOptions({
+                position: esmap.ESControlPositon.RIGHT_TOP,
+                imgURL: 'image/wedgets/'
+            })
+            floorControl = new esmap.ESScrollFloorsControl(map, ctlOpt);
+
+
+
+        })
+
+        //室内建筑加载完成后
+        map.on('buildingLoadComplete',function(building){
+            // 更新楼层控件
+            floorControl.update(building);
+
+        })
+
+        //城市场景元素点击事件
+        map.on('mapClickNode', function (event) {
+            console.log(event);
+
+        })
+
+        // 清除所有特效
+        function clearAll() {
+            if (effectLayer) effectLayer.removeAll();
+            cubeFloatList = [];
+        }
+
+    })
+</script>
+<script type="text/javascript">
+    //js工具函数
+    function getQueryString(name) {
+        var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+        var r = window.location.search.substr(1).match(reg);
+        if (r != null) return unescape(r[2]);
+        return null;
+    }
+</script>
+
+</html>
+
