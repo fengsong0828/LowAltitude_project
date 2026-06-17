@@ -258,6 +258,9 @@ function bindUIEvents() {
         if (!c) return;
         State.viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(c.lon, c.lat, c.alt), orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-90), roll: 0 }, duration: 1.2 });
     });
+    dom('btn-commloss').addEventListener('click', function () {
+        if (State.aircraftManager) State.aircraftManager.testCommLoss();
+    });
     document.querySelectorAll('.city-btn').forEach(function (b) {
         b.addEventListener('click', function () {
             if (this.dataset.city && this.dataset.city !== State.currentCity) switchCity(this.dataset.city);

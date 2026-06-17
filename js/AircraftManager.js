@@ -231,7 +231,9 @@ var AircraftManager = (function () {
             this._updateBattery(ac, dt);
             this._updateTrail(ac);
             this._checkNoFlyZone(ac);
+            this._updateCommLoss(ac, dt);
         }
+        this._detectConflicts(dt);
         // 节流：最多每 500ms 刷新一次面板
         var now = Date.now();
         if (!this._lastPanelUpdate || now - this._lastPanelUpdate > 500) {
@@ -243,23 +245,34 @@ var AircraftManager = (function () {
     AircraftManager.prototype._moveAircraft = function (ac, dt) {
         var route = ac.route;
         var idx = ac.routeIndex, prog = ac.routeProgress, spd = ac.speed || 20;
-        var p0 = route[idx], p1 = route[(idx + 1) % route.length];
+        var direction = (ac.status === 'returning') ? -1 : 1;  // 返航时倒退
+        var effectiveSpeed = (ac.status === 'returning') ? spd * 0.6 : spd;  // 返航减速
+
+        var segCount = route.length;
+        var p0 = route[idx];
+        var nextIdx = (idx + direction + segCount) % segCount;
+        var p1 = route[nextIdx];
+
         var dLon = (p1[0] - p0[0]) * Math.cos((p0[1] + p1[1]) / 2 * Math.PI / 180);
         var segM = Math.sqrt(dLon * dLon + (p1[1] - p0[1]) * (p1[1] - p0[1])) * 111000;
-        prog += (segM > 0 ? (spd * dt) / segM : 1);
+        prog += (segM > 0 ? (effectiveSpeed * dt) / segM : 1);
 
         while (prog >= 1) {
             prog -= 1;
-            idx = (idx + 1) % route.length;
-            p0 = route[idx]; p1 = route[(idx + 1) % route.length];
+            idx = (idx + direction + segCount) % segCount;
+            p0 = route[idx];
+            nextIdx = (idx + direction + segCount) % segCount;
+            p1 = route[nextIdx];
             dLon = (p1[0] - p0[0]) * Math.cos((p0[1] + p1[1]) / 2 * Math.PI / 180);
             segM = Math.sqrt(dLon * dLon + (p1[1] - p0[1]) * (p1[1] - p0[1])) * 111000;
             if (segM <= 0) { prog = 0; break; }
         }
-        ac.routeIndex = idx % route.length;
+        ac.routeIndex = (idx + segCount) % segCount;
         ac.routeProgress = Math.max(0, Math.min(1, prog));
 
-        p0 = route[ac.routeIndex]; p1 = route[(ac.routeIndex + 1) % route.length];
+        p0 = route[ac.routeIndex];
+        nextIdx = (ac.routeIndex + direction + segCount) % segCount;
+        p1 = route[nextIdx];
         var t = ac.routeProgress;
         ac.currentLng = p0[0] + (p1[0] - p0[0]) * t;
         ac.currentLat = p0[1] + (p1[1] - p0[1]) * t;
@@ -289,13 +302,21 @@ var AircraftManager = (function () {
                 droneId: ac.id,
             });
         }
-        if (ac.battery <= 0) {
+        if (ac.battery <= 0 && ac.status !== 'emergency') {
             ac.moving = false; ac.status = 'emergency';
             if (this.alertSystem) this.alertSystem.addAlert({
                 level: 'L3', category: 'battery',
                 message: ac.callsign + ' 电量耗尽，紧急降落',
                 droneId: ac.id,
             });
+        }
+        // 紧急降落：高度逐渐降至 0
+        if (ac.status === 'emergency') {
+            ac.currentAlt = Math.max(0, ac.currentAlt - dt * 5);
+            var entry2 = this.aircraft[ac.id];
+            if (entry2 && entry2.entity) {
+                entry2.entity.position = Cesium.Cartesian3.fromDegrees(ac.currentLng, ac.currentLat, ac.currentAlt);
+            }
         }
     };
 
@@ -361,6 +382,77 @@ var AircraftManager = (function () {
                     }
                 }
             }
+        }
+    };
+
+    // ============ 冲突检测（两两距离） ============
+    AircraftManager.prototype._detectConflicts = function (dt) {
+        if (!this._conflictPairs) this._conflictPairs = {};
+        var active = this.aircraftList.filter(function (a) { return a.status !== 'ground' && a.status !== 'emergency'; });
+        for (var i = 0; i < active.length; i++) {
+            for (var j = i + 1; j < active.length; j++) {
+                var a = active[i], b = active[j];
+                var dLat = (a.currentLat - b.currentLat) * 111000;
+                var dLon = (a.currentLng - b.currentLng) * 111000 * Math.cos((a.currentLat + b.currentLat) / 2 * Math.PI / 180);
+                var dist = Math.sqrt(dLat * dLat + dLon * dLon);
+                var vsep = Math.abs(a.currentAlt - b.currentAlt);
+                var pairKey = a.id < b.id ? a.id + '-' + b.id : b.id + '-' + a.id;
+
+                if (dist < 200 && vsep < 60) {
+                    var level = dist < 50 ? 'L3' : dist < 100 ? 'L2' : 'L1';
+                    if (!this._conflictPairs[pairKey]) {
+                        this._conflictPairs[pairKey] = Date.now();
+                        if (this.alertSystem) {
+                            this.alertSystem.addAlert({
+                                level: level, category: 'conflict',
+                                message: a.callsign + ' ⇄ ' + b.callsign + ' 冲突(' + dist.toFixed(0) + 'm, Δ' + vsep.toFixed(0) + 'm)',
+                                droneId: a.id,
+                            });
+                        }
+                        // 自动高度分离
+                        a.status = a.status !== 'returning' ? 'cruising' : a.status;
+                        b.status = b.status !== 'returning' ? 'cruising' : b.status;
+                        a.currentAlt += 40;
+                        b.currentAlt -= 40;
+                    }
+                } else {
+                    // 冲突解除
+                    if (this._conflictPairs[pairKey]) {
+                        delete this._conflictPairs[pairKey];
+                    }
+                }
+            }
+        }
+    };
+
+    // ============ 通信丢失测试 ============
+    AircraftManager.prototype.testCommLoss = function () {
+        if (!this.selectedId) { this._debug('请先选择一架飞行器'); return; }
+        var ac = this.aircraftList.find(function (a) { return a.id === this.selectedId; }.bind(this));
+        if (!ac) return;
+        ac.commLoss = true;
+        ac.commTimer = 0;
+        ac.status = 'hovering';
+        if (this.alertSystem) {
+            this.alertSystem.addAlert({
+                level: 'L3', category: 'comm_loss',
+                message: ac.callsign + ' 通信丢失，尝试自动返航',
+                droneId: ac.id,
+            });
+        }
+        this._debug('COMM LOSS: ' + ac.callsign);
+    };
+
+    AircraftManager.prototype._updateCommLoss = function (ac, dt) {
+        if (!ac.commLoss) return;
+        ac.commTimer += dt;
+        if (ac.commTimer < 8 && ac.status === 'hovering') {
+            // 悬停摇摆
+            ac.currentAlt += Math.sin(ac.commTimer * 3) * 0.3;
+        } else if (ac.commTimer >= 8 && ac.status === 'hovering') {
+            // 开始返航
+            ac.status = 'returning';
+            ac.moving = true;
         }
     };
 
