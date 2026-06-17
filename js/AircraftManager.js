@@ -291,7 +291,7 @@ var AircraftManager = (function () {
             }
         }
         if (this.cameraView && this.cameraView.activeAircraft === ac.id) {
-            this.cameraView.updatePosition(ac.currentLat, ac.currentLng);
+            this.cameraView.updatePosition(ac.currentLat, ac.currentLng, ac.heading);
         }
     };
 
@@ -532,7 +532,7 @@ var AircraftManager = (function () {
         this.selectedId = id;
         this._showDetail(ac);
         this._updatePanel();
-        if (this.cameraView) this.cameraView.show(ac.id, ac.callsign, ac.currentLat, ac.currentLng);
+        if (this.cameraView) this.cameraView.show(ac.id, ac.callsign, ac.currentLat, ac.currentLng, ac.heading);
 
         // 追踪飞行器（camera 跟随）
         var entry = this.aircraft[id];

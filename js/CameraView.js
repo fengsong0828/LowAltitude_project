@@ -41,7 +41,8 @@ var CameraView = (function () {
             '<div style="position:absolute;top:50%;left:50%;width:30px;height:1px;background:#f44;transform:translate(-50%,0);"></div>' +
             '<div style="position:absolute;top:50%;left:50%;width:1px;height:30px;background:#f44;transform:translate(0,-50%);"></div>' +
             '<div style="position:absolute;top:50%;left:50%;width:8px;height:8px;border:1px solid #f44;border-radius:50%;transform:translate(-50%,-50%);"></div>' +
-            '<div style="position:absolute;top:50%;left:50%;color:#fff;font-size:10px;text-shadow:0 0 4px #000;transform:translate(-50%,-28px);white-space:nowrap;" id="cv-label">-</div>' +
+            '<div style="position:absolute;top:50%;left:50%;color:#0f0;font-size:10px;text-shadow:0 0 4px #000;transform:translate(-50%,-28px);white-space:nowrap;" id="cv-label">-</div>' +
+            '<div style="position:absolute;top:10px;left:50%;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:10px solid #0f0;transform:translateX(-50%);"></div>' +  // 前进箭头
             '</div>' +
             '</div>' +
             '<div class="cv-footer"><span class="cv-coord" id="cv-coord">-</span></div>';
@@ -57,11 +58,12 @@ var CameraView = (function () {
         document.getElementById('cv-close').onclick = function () { self.hide(); };
     };
 
-    CameraView.prototype.show = function (aircraftId, callsign, lat, lng) {
+    CameraView.prototype.show = function (aircraftId, callsign, lat, lng, heading) {
         this.activeAircraft = aircraftId;
         this.callsign = callsign;
         this.isVisible = true;
         this.lastUpdate = 0;
+        this.currentHeading = heading || 0;
         var container = document.getElementById('camera-view');
         if (container) container.style.display = 'block';
         var title = document.getElementById('cv-title');
@@ -76,8 +78,9 @@ var CameraView = (function () {
         if (container) container.style.display = 'none';
     };
 
-    CameraView.prototype.updatePosition = function (lat, lng) {
+    CameraView.prototype.updatePosition = function (lat, lng, heading) {
         if (!this.isVisible) return;
+        if (heading !== undefined) this.currentHeading = heading;
         var now = Date.now();
         if (now - this.lastUpdate < 200) return;
         this.lastUpdate = now;
@@ -101,6 +104,10 @@ var CameraView = (function () {
         if (gridEl) {
             gridEl.style.left = -(TILE + ox - TILE/2) + 'px';
             gridEl.style.top = -(TILE + oy - TILE/2) + 'px';
+            // 根据飞行器航向旋转，前进方向始终朝上
+            var rot = -(this.currentHeading || 0);
+            gridEl.style.transform = 'rotate(' + rot + 'deg)';
+            gridEl.style.transformOrigin = (TILE/2 + TILE + ox) + 'px ' + (TILE/2 + TILE + oy) + 'px';
         }
 
         // 加载 9 个瓦片
