@@ -23,13 +23,17 @@ var AircraftManager = (function () {
     AircraftManager.prototype.loadCity = async function (cityKey) {
         this.clear();
         this.cityKey = cityKey;
+        this._debug('clear done, loading: ' + cityKey);
 
         try {
+            this._debug('fetching fleet.json...');
             var resp = await fetch(FLEET_URL);
-            if (!resp.ok) { console.log('[Fleet] 无配置'); return; }
+            if (!resp.ok) { this._debug('FETCH FAIL: ' + resp.status); return; }
+            this._debug('fetched OK, parsing...');
             var allFleets = await resp.json();
             var acList = allFleets[cityKey];
-            if (!acList || acList.length === 0) { console.log('[Fleet] ' + cityKey + ': 无飞行器'); return; }
+            if (!acList || acList.length === 0) { this._debug('NO AIRCRAFT for ' + cityKey); return; }
+            this._debug('got ' + acList.length + ' aircraft, creating entities...');
 
             for (var i = 0; i < acList.length; i++) {
                 var ac = acList[i];
@@ -54,11 +58,19 @@ var AircraftManager = (function () {
             this.isActive = true;
             this._startSimulation();
             this._updatePanel();
+            this._debug(cityKey + ': ' + acList.length + ' aircraft READY');
             console.log('[Fleet] ' + cityKey + ': ' + acList.length + ' 架就绪');
 
         } catch (e) {
+            this._debug('ERROR: ' + e.message);
             console.error('[Fleet] 加载失败:', e);
         }
+    };
+
+    AircraftManager.prototype._debug = function (msg) {
+        var el = document.getElementById('debug-panel');
+        if (el) el.textContent = '舰队: ' + msg;
+        console.log('[Fleet DBG] ' + msg);
     };
 
     // ============ 创建实体（航线+飞行器+标签） ============

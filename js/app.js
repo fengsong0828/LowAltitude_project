@@ -129,10 +129,13 @@ async function switchCity(key) {
 
     showLoading(true, city.name + ' - 加载瓦片索引...');
     try {
+        var dbg = document.getElementById('debug-panel');
+        if (dbg) dbg.textContent = '舰队: tileManager.switchCity...';
         await State.tileManager.switchCity(key);
 
         // v2.0: 加载飞行器（loadCity 内部已 clear）
         if (State.aircraftManager) {
+            if (dbg) dbg.textContent = '舰队: aircraftManager.loadCity...';
             await State.aircraftManager.loadCity(key);
         }
         setupNoFlyZones();
@@ -289,6 +292,8 @@ async function main() {
         State.cameraView = new CameraView();
         State.aircraftManager = new AircraftManager(State.viewer, State, State.alertSystem, State.cameraView);
         console.log('[Aircraft] v2.0 模块已就绪');
+        var dbg = document.getElementById('debug-panel');
+        if (dbg) dbg.textContent = '舰队: 模块已初始化, 等待选择城市';
 
         // 飞行器面板点击事件
         document.getElementById('fleet-list').addEventListener('click', function (e) {
