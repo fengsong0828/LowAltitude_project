@@ -473,65 +473,7 @@ function bindUIEvents() {
         }
     });
 
-    // ============ 禁飞区绘制辅助函数（全局作用域） ============
-    function _clearNfzPreview() {
-        if (State.nfzPreviewLine) {
-            State.viewer.entities.remove(State.nfzPreviewLine);
-            State.nfzPreviewLine = null;
-        }
-    }
-    function _clearNfzTemp() {
-        for (var i = 0; i < State.nfzTempEntities.length; i++) {
-            State.viewer.entities.remove(State.nfzTempEntities[i]);
-        }
-        State.nfzTempEntities = [];
-        _clearNfzPreview();
-    }
-    function _clearCustomNfz() {
-        var viewer = State.viewer;
-        var all = viewer.entities.values;
-        for (var i = all.length - 1; i >= 0; i--) {
-            if (all[i]._isCustomNfz) viewer.entities.remove(all[i]);
-        }
-        State.customNfz = [];
-        if (State.aircraftManager) {
-            State.aircraftManager.setNoFlyZones([]);
-        }
-    }
-    function _finishNfzDrawing() {
-        if (State.nfzPoints.length < 3) { State.nfzPoints = []; _clearNfzTemp(); return; }
-        var pts = State.nfzPoints.slice();
-        pts.push(pts[0]);
-        var pos = [];
-        for (var i = 0; i < pts.length; i++) pos.push(pts[i][0], pts[i][1]);
-        var poly = State.viewer.entities.add({
-            polygon: {
-                hierarchy: Cesium.Cartesian3.fromDegreesArray(pos),
-                material: Cesium.Color.RED.withAlpha(0.2),
-                outline: true, outlineColor: Cesium.Color.RED.withAlpha(0.6), outlineWidth: 2,
-            },
-        });
-        poly._isCustomNfz = true;
-        var clat = 0, clng = 0;
-        for (var j = 0; j < State.nfzPoints.length; j++) { clat += State.nfzPoints[j][1]; clng += State.nfzPoints[j][0]; }
-        clat /= State.nfzPoints.length; clng /= State.nfzPoints.length;
-        var maxR = 0;
-        for (var k = 0; k < State.nfzPoints.length; k++) {
-            var dlat = (State.nfzPoints[k][1] - clat) * 111000;
-            var dlon = (State.nfzPoints[k][0] - clng) * 111000 * Math.cos(clat * Math.PI / 180);
-            maxR = Math.max(maxR, Math.sqrt(dlat * dlat + dlon * dlon));
-        }
-        var zone = { lon: clng, lat: clat, r: maxR, n: '自定义禁飞区' + (State.customNfz.length + 1) };
-        State.customNfz.push(zone);
-        if (State.aircraftManager) {
-            var allZones = State.aircraftManager.noflyZones.concat(zone);
-            State.aircraftManager.setNoFlyZones(allZones);
-        }
-        State.nfzPoints = [];
-        _clearNfzTemp();
-    }
-
-    // ============ 禁飞区绘制按钮 ============
+    // ============ 禁飞区绘制按钮事件 ============
     State.nfzDrawMode = false;
     State.nfzPoints = [];
     State.nfzTempEntities = [];
@@ -566,6 +508,60 @@ function bindUIEvents() {
             if (this.dataset.city && this.dataset.city !== State.currentCity) switchCity(this.dataset.city);
         });
     });
+}
+
+// ============ 禁飞区绘制辅助函数 ============
+function _clearNfzPreview() {
+    if (State.nfzPreviewLine) {
+        State.viewer.entities.remove(State.nfzPreviewLine);
+        State.nfzPreviewLine = null;
+    }
+}
+function _clearNfzTemp() {
+    for (var i = 0; i < State.nfzTempEntities.length; i++) {
+        State.viewer.entities.remove(State.nfzTempEntities[i]);
+    }
+    State.nfzTempEntities = [];
+    _clearNfzPreview();
+}
+function _clearCustomNfz() {
+    var viewer = State.viewer;
+    var all = viewer.entities.values;
+    for (var i = all.length - 1; i >= 0; i--) {
+        if (all[i]._isCustomNfz) viewer.entities.remove(all[i]);
+    }
+    State.customNfz = [];
+    if (State.aircraftManager) State.aircraftManager.setNoFlyZones([]);
+}
+function _finishNfzDrawing() {
+    if (State.nfzPoints.length < 3) { State.nfzPoints = []; _clearNfzTemp(); return; }
+    var pts = State.nfzPoints.slice(); pts.push(pts[0]);
+    var pos = [];
+    for (var i = 0; i < pts.length; i++) pos.push(pts[i][0], pts[i][1]);
+    var poly = State.viewer.entities.add({
+        polygon: {
+            hierarchy: Cesium.Cartesian3.fromDegreesArray(pos),
+            material: Cesium.Color.RED.withAlpha(0.2),
+            outline: true, outlineColor: Cesium.Color.RED.withAlpha(0.6), outlineWidth: 2,
+        },
+    });
+    poly._isCustomNfz = true;
+    var clat = 0, clng = 0;
+    for (var j = 0; j < State.nfzPoints.length; j++) { clat += State.nfzPoints[j][1]; clng += State.nfzPoints[j][0]; }
+    clat /= State.nfzPoints.length; clng /= State.nfzPoints.length;
+    var maxR = 0;
+    for (var k = 0; k < State.nfzPoints.length; k++) {
+        var dlat = (State.nfzPoints[k][1] - clat) * 111000;
+        var dlon = (State.nfzPoints[k][0] - clng) * 111000 * Math.cos(clat * Math.PI / 180);
+        maxR = Math.max(maxR, Math.sqrt(dlat * dlat + dlon * dlon));
+    }
+    var zone = { lon: clng, lat: clat, r: maxR, n: '自定义禁飞区' + (State.customNfz.length + 1) };
+    State.customNfz.push(zone);
+    if (State.aircraftManager) {
+        State.aircraftManager.setNoFlyZones(State.aircraftManager.noflyZones.concat(zone));
+    }
+    State.nfzPoints = [];
+    _clearNfzTemp();
 }
 
 function updateCityUI(key) {
