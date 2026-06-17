@@ -78,7 +78,7 @@ var CameraView = (function () {
     CameraView.prototype.updatePosition = function (lat, lng) {
         if (!this.isVisible) return;
         var now = Date.now();
-        if (now - this.lastUpdate < 500) return;
+        if (now - this.lastUpdate < 200) return;
         this.lastUpdate = now;
         this._loadTiles(lat, lng);
     };
