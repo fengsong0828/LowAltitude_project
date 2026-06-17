@@ -107,12 +107,17 @@ function initCesium() {
         var p = v.scene.pick(cl.position);
         if (Cesium.defined(p) && p.id && p.id._bld) showTooltip(p.id._bld, cl.position);
         else if (Cesium.defined(p) && p.id && p.id._acData) {
-            // v2.0: 点击飞行器
             if (State.aircraftManager) {
                 State.aircraftManager.handleClick(p.id);
             }
         }
-        else hideTooltip();
+        else {
+            hideTooltip();
+            // 点击空白处取消追踪
+            if (State.aircraftManager && State.aircraftManager._untrack) {
+                State.aircraftManager._untrack();
+            }
+        }
     }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
     v.camera.changed.addEventListener(updateStatusBar);
 }

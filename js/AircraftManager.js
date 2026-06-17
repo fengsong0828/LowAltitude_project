@@ -233,14 +233,34 @@ var AircraftManager = (function () {
         if (ac.trailPoints.length > 40) ac.trailPoints.shift();
     };
 
-    // ============ 选中/详情 ============
+    // ============ 选中/详情/追踪 ============
     AircraftManager.prototype.selectAircraft = function (id) {
         var ac = this.aircraftList.find(function (a) { return a.id === id; });
         if (!ac) return;
+
+        // 切换追踪：再次点击同一个飞行器取消追踪
+        if (this.selectedId === id && this.viewer.trackedEntity) {
+            this._untrack();
+            return;
+        }
+
         this.selectedId = id;
         this._showDetail(ac);
         this._updatePanel();
         if (this.cameraView) this.cameraView.show(ac.id, ac.callsign, ac.currentLat, ac.currentLng);
+
+        // 追踪飞行器（camera 跟随）
+        var entry = this.aircraft[id];
+        if (entry && entry.entity) {
+            this.viewer.trackedEntity = entry.entity;
+        }
+    };
+
+    AircraftManager.prototype._untrack = function () {
+        this.viewer.trackedEntity = undefined;
+        this.selectedId = null;
+        this._updatePanel();
+        if (this.cameraView) this.cameraView.hide();
     };
 
     AircraftManager.prototype._showDetail = function (ac) {
@@ -284,6 +304,7 @@ var AircraftManager = (function () {
     AircraftManager.prototype.clear = function () {
         this.isActive = false;
         if (this.animFrame) { cancelAnimationFrame(this.animFrame); this.animFrame = null; }
+        this.viewer.trackedEntity = undefined;  // 取消追踪
         for (var id in this.aircraft) {
             var e = this.aircraft[id];
             if (e.entity) this.viewer.entities.remove(e.entity);
