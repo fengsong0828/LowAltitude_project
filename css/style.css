@@ -388,7 +388,7 @@ html, body {
 .btn-primary { background: #00d4ff; color: #000; }
 .btn-primary.btn-sm { padding: 4px 10px; font-size: 11px; }
 
-#camera-view { position: absolute; bottom: 40px; right: 260px; width: 330px; background: rgba(10,15,25,0.95); border: 1px solid rgba(0,212,255,0.3); border-radius: 8px; overflow: hidden; z-index: 200; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+#camera-view { position: absolute; bottom: 40px; left: 260px; width: 330px; background: rgba(10,15,25,0.95); border: 1px solid rgba(0,212,255,0.3); border-radius: 8px; overflow: hidden; z-index: 200; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
 .cv-header { display: flex; justify-content: space-between; align-items: center; padding: 4px 10px; background: rgba(0,212,255,0.1); font-size: 11px; }
 .cv-title { color: #00d4ff; }
 .cv-close { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 4px; }

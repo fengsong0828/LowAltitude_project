@@ -77,7 +77,7 @@ var AircraftManager = (function () {
     AircraftManager.prototype._createEntity = function (ac) {
         var color = Cesium.Color.fromCssColorString(ac.color || '#ff6600');
 
-        // 航线轨迹（发光线条）
+        // 航线轨迹（高亮实线）
         var routePos = [];
         for (var i = 0; i < ac.route.length; i++) {
             routePos.push(ac.route[i][0], ac.route[i][1], ac.route[i][2]);
@@ -85,11 +85,8 @@ var AircraftManager = (function () {
         var routeEntity = this.viewer.entities.add({
             polyline: {
                 positions: Cesium.Cartesian3.fromDegreesArrayHeights(routePos),
-                width: 2,
-                material: new Cesium.PolylineGlowMaterialProperty({
-                    glowPower: 0.2,
-                    color: color.withAlpha(0.5),
-                }),
+                width: 4,
+                material: color.withAlpha(0.7),
                 clampToGround: false,
             },
         });

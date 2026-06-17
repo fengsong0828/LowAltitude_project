@@ -49,6 +49,9 @@ var CameraView = (function () {
         var title = document.getElementById('cv-title');
         if (title) title.textContent = callsign + ' 摄像头';
 
+        var dbg = document.getElementById('debug-panel');
+        if (dbg) dbg.textContent = '摄像头: ' + callsign + ' (' + lat.toFixed(4) + ',' + lng.toFixed(4) + ')';
+
         this.updatePosition(lat, lng);
     };
 
@@ -89,9 +92,13 @@ var CameraView = (function () {
         var xy = this._latLonToTileXY(lat, lng, zoom);
         var cx = xy[0], cy = xy[1];
 
-        // 先填充背景
-        ctx.fillStyle = '#1a2a3a';
+        // 先填充背景 + 加载文字
+        ctx.fillStyle = '#0a0f1a';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#00d4ff';
+        ctx.font = '12px "Microsoft YaHei", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('加载中...', canvas.width / 2, canvas.height / 2);
 
         // 绘制 3×3 瓦片网格（覆盖当前位置 + 周围）
         var loaded = 0;
