@@ -10,7 +10,7 @@ var TileManager = (function () {
     var UNLOAD_DELAY_MS = 2000;   // 离开视口后延迟卸载
     var BUFFER_TILES = 0;          // 不预加载外围瓦片
     var UPDATE_THROTTLE_MS = 500;  // 视口变化检测间隔
-    var MAX_LOADED_TILES = 8;      // 最大同时加载瓦片数
+    var MAX_LOADED_TILES = 30;     // 增大以显示更多建筑
     var MAX_CONCURRENT = 2;        // 并行加载数
 
     function TileManager(viewer, state, config) {
