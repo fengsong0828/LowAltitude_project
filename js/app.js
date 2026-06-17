@@ -121,7 +121,6 @@ function initCesium() {
 async function switchCity(key) {
     if (State.isSwitching || State.currentCity === key) return;
     State.isSwitching = true;
-    stopPatrol();
     const city = CITIES[key];
     console.log('[City]', city.name);
 
