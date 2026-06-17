@@ -1,0 +1,36 @@
+{
+  "city": "chongqing",
+  "name": "重庆",
+  "center": {
+    "lon": 106.565,
+    "lat": 29.57,
+    "alt": 5500
+  },
+  "gridOrigin": {
+    "lat": 29.3,
+    "lon": 106.35
+  },
+  "tileSizeLat": 0.05,
+  "tileSizeLon": 0.05,
+  "gridCols": 6,
+  "gridRows": 7,
+  "bbox": {
+    "south": 29.3,
+    "west": 106.35,
+    "north": 29.7,
+    "east": 106.75
+  },
+  "availableLayers": [
+    "buildings",
+    "water",
+    "roads",
+    "vegetation"
+  ],
+  "tileCounts": {
+    "buildings": 5068,
+    "water": 0,
+    "roads": 0,
+    "vegetation": 0
+  },
+  "timestamp": "2026-06-17T14:00:00Z"
+}
