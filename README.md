@@ -73,12 +73,16 @@
 │   ├── AlertSystem.js             # 告警生成、去重、条件清除
 │   ├── CameraView.js              # 3×3 瓦片摄像头 PIP
 │   └── EngineClient.js            # Python 后端 WebSocket 客户端
-├── scripts/
+  ├── scripts/
 │   ├── serve.py                   # 静态服务 + 地形 + 图块 + 持久化 API
 │   ├── engine_server.py           # 仿真引擎（FastAPI + WebSocket）
 │   ├── split_to_tiles.py          # GeoJSON → 瓦片切分
 │   ├── tile_downloader.py         # 扩展城市数据下载
-│   ├── download_imagery.py        # 图块下载
+│   ├── download_imagery.py        # 卫星图块下载
+│   ├── download_cities.py         # 8城建筑数据下载
+│   ├── download_features.py       # 自然要素下载（水体/道路/植被）
+│   ├── download_srtm.py           # SRTM 地形下载
+│   ├── download_osm.py            # 单区域建筑下载
 │   ├── gen_aircraft.py            # 飞行器配置生成
 │   └── gen_fleet.py               # 统一飞行器配置生成
 ├── data/
