@@ -24,7 +24,7 @@ var CameraView = (function () {
             '<span class="cv-title" id="cv-title">机载摄像头</span>' +
             '<button class="cv-close" id="cv-close">&times;</button>' +
             '</div>' +
-            '<div id="cv-img-container" style="width:320px;height:220px;overflow:hidden;position:relative;background:#0a0f1a;">' +
+            '<div id="cv-img-container" style="width:256px;height:256px;overflow:hidden;position:relative;background:#0a0f1a;margin:0 auto;">' +
             '<img id="cv-tile-img" style="position:absolute;width:256px;height:256px;image-rendering:pixelated;" src="">' +
             '<div id="cv-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">' +
             '<div style="position:absolute;top:50%;left:50%;width:30px;height:1px;background:#f44;transform:translate(-50%,0);"></div>' +
@@ -82,8 +82,8 @@ var CameraView = (function () {
         var coord = document.getElementById('cv-coord');
 
         if (img) {
-            img.style.left = (160 - ox) + 'px';
-            img.style.top = (110 - oy) + 'px';
+            img.style.left = (128 - ox) + 'px';
+            img.style.top = (128 - oy) + 'px';
             img.style.display = '';
 
             // ESRI 优先（有 zoom 16 图块），本地备用
