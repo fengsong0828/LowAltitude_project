@@ -8,10 +8,11 @@ var TileManager = (function () {
 
     var TILE_URL_PREFIX = 'data/tiles/';
     var UNLOAD_DELAY_MS = 2000;   // 离开视口后延迟卸载
-    var BUFFER_TILES = 0;          // 不预加载外围瓦片（减少内存）
-    var UPDATE_THROTTLE_MS = 400;  // 视口变化检测间隔
-    var MAX_LOADED_TILES = 60;     // 最大同时加载瓦片数
-    var MAX_CONCURRENT = 3;        // 并行加载数
+    var BUFFER_TILES = 0;          // 不预加载外围瓦片
+    var UPDATE_THROTTLE_MS = 500;  // 视口变化检测间隔
+    var MAX_LOADED_TILES = 12;     // 最大同时加载瓦片数（西安87K建筑×每栋12面≈100万三角形，必须限制）
+    var MAX_CONCURRENT = 2;        // 并行加载数
+    var MAX_TOTAL_ENTITIES = 5000; // 场景总实体硬上限
 
     function TileManager(viewer, state, config) {
         this.viewer = viewer;
@@ -170,9 +171,13 @@ var TileManager = (function () {
         // 异步加载新瓦片（限流 + 总量上限）
         this.visibleTileKeys = newVisible;
 
-        // 如果已加载瓦片数已达上限，跳过本次加载（等待旧瓦片卸载）
+        // 如果已加载瓦片数已达上限，跳过（等待旧瓦片卸载）
         var loadedCount = Object.keys(this.loadedTiles).length;
         if (loadedCount >= MAX_LOADED_TILES) return;
+
+        // 场景总实体数硬限制（防止西安等大城市OOM）
+        var totalEntities = this.viewer.entities.values.length;
+        if (totalEntities > MAX_TOTAL_ENTITIES) return;
 
         // 限制本次加载数量
         var maxToLoad = MAX_LOADED_TILES - loadedCount;
