@@ -6,17 +6,14 @@ echo ============================================
 echo   低空飞行器管理平台 v3.0
 echo ============================================
 echo.
-echo   启动仿真引擎 (8765) [可选]...
-start "Engine" /min cmd /c "python scripts\engine_server.py 2>nul"
+echo   正在启动服务...
 
-echo   启动 Web 服务 (8080)...
-echo   浏览器即将打开...
-echo.
-echo   按 Ctrl+C 停止
-echo.
+:: 仿真引擎（后台静默，失败不阻塞）
+start /min "" python scripts\engine_server.py >nul 2>&1
 
-timeout /t 2 /nobreak >nul
+:: 浏览器
 start "" http://localhost:8080
 
+:: Web 服务（前台，Ctrl+C 停止）
 python scripts\serve.py
 pause
