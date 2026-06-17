@@ -68,7 +68,8 @@ var CameraView = (function () {
         if (container) container.style.display = 'block';
         var title = document.getElementById('cv-title');
         if (title) title.textContent = callsign + ' 摄像头';
-        this._loadTiles(lat, lng);
+        this._updateGridPosition(lat, lng);
+        this._loadTileImages(lat, lng);
     };
 
     CameraView.prototype.hide = function () {
@@ -81,34 +82,37 @@ var CameraView = (function () {
     CameraView.prototype.updatePosition = function (lat, lng, heading) {
         if (!this.isVisible) return;
         if (heading !== undefined) this.currentHeading = heading;
+        // 格子位置实时更新（流畅滚动）
+        this._updateGridPosition(lat, lng);
+        // 瓦片图片节流加载
         var now = Date.now();
-        if (now - this.lastUpdate < 200) return;
+        if (now - this.lastUpdate < 500) return;
         this.lastUpdate = now;
-        this._loadTiles(lat, lng);
+        this._loadTileImages(lat, lng);
     };
 
-    CameraView.prototype._loadTiles = function (lat, lng) {
+    CameraView.prototype._updateGridPosition = function (lat, lng) {
         var xy = this._latLonToTileXY(lat, lng, ZOOM);
         var cx = xy[0], cy = xy[1];
-
-        // 飞行器在中心瓦片内的像素偏移
         var n = Math.pow(2, ZOOM);
         var px = (lng + 180) / 360 * n;
         var py = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n;
         var ox = Math.round((px - cx) * TILE);
         var oy = Math.round((py - cy) * TILE);
 
-        // 3×3 网格：中心瓦片 + 8 个邻居
-        // 网格定位：让飞行器位置在容器中心
         var gridEl = document.getElementById('cv-grid');
         if (gridEl) {
             gridEl.style.left = -(TILE + ox - TILE/2) + 'px';
             gridEl.style.top = -(TILE + oy - TILE/2) + 'px';
-            // 根据飞行器航向旋转，前进方向始终朝上
             var rot = -(this.currentHeading || 0);
             gridEl.style.transform = 'rotate(' + rot + 'deg)';
             gridEl.style.transformOrigin = (TILE/2 + TILE + ox) + 'px ' + (TILE/2 + TILE + oy) + 'px';
         }
+    };
+
+    CameraView.prototype._loadTileImages = function (lat, lng) {
+        var xy = this._latLonToTileXY(lat, lng, ZOOM);
+        var cx = xy[0], cy = xy[1];
 
         // 加载 9 个瓦片
         for (var i = 0; i < 9; i++) {
