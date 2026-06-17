@@ -142,7 +142,6 @@ var CameraView = (function () {
             function tryUrl(idx) {
                 if (idx >= urls.length) return;
                 var img = new Image();
-                img.crossOrigin = 'anonymous';
                 img.onload = function () {
                     ctx.drawImage(img, dx, dy, TILE_SIZE, TILE_SIZE);
                     loaded++;
