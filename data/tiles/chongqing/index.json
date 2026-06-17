@@ -7,17 +7,17 @@
     "alt": 5500
   },
   "gridOrigin": {
-    "lat": 29.5,
-    "lon": 106.44999999999999
+    "lat": 29.3,
+    "lon": 106.35
   },
   "tileSizeLat": 0.05,
   "tileSizeLon": 0.05,
-  "gridCols": 4,
-  "gridRows": 3,
+  "gridCols": 6,
+  "gridRows": 7,
   "bbox": {
-    "south": 29.5,
-    "west": 106.44999999999999,
-    "north": 29.65,
+    "south": 29.3,
+    "west": 106.35,
+    "north": 29.650000000000002,
     "east": 106.64999999999999
   },
   "availableLayers": [
@@ -32,5 +32,5 @@
     "roads": 0,
     "vegetation": 0
   },
-  "timestamp": "2026-06-17T15:00:00Z"
+  "timestamp": "2026-06-17T15:30:00Z"
 }
