@@ -53,15 +53,19 @@ html, body {
     font-size: 12px;
     color: rgba(255,255,255,0.5);
     margin-left: 12px;
+    flex: 1;
 }
-
-/* ============ 右侧控制面板 ============ */
-#panel {
-    background: rgba(15, 25, 40, 0.92);
+.city-label {
+    margin-left: auto;
+    font-size: 12px;
+    color: #00d4ff;
+    border: 1px solid rgba(0,212,255,0.3);
+    padding: 2px 12px;
     border-radius: 12px;
-    color: #e0e8f0;
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.1);
+    pointer-events: auto;
+    flex-shrink: 0;
+    min-width: 60px;
+    text-align: center;
 }
 #panel .panel-header {
     padding: 10px 14px;
