@@ -91,7 +91,7 @@ function initCesium() {
 
     // 初始视角：完整地球居中，俯视全貌
     v.camera.setView({
-        destination: Cesium.Cartesian3.fromDegrees(105, 15, 22000000),
+        destination: Cesium.Cartesian3.fromDegrees(105, -10, 22000000),
         orientation: { heading: 0, pitch: Cesium.Math.toRadians(-90), roll: 0 },
     });
 
@@ -748,7 +748,7 @@ async function main() {
         // 从太空远眺完整地球，缓缓转向中国方向
         v.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(105, 20, 18000000),
-            orientation: { heading: Cesium.Math.toRadians(-10), pitch: Cesium.Math.toRadians(-80), roll: 0 },
+            orientation: { heading: Cesium.Math.toRadians(-10), pitch: Cesium.Math.toRadians(-85), roll: 0 },
             duration: 3.0,
         });
 
