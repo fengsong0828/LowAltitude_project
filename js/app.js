@@ -234,6 +234,10 @@ async function switchCity(key) {
             await State.aircraftManager.loadCity(key);
         }
         setupNoFlyZones();
+        // 加载持久化自定义禁飞区
+        _loadNfz();
+        // 加载持久化飞行计划
+        _loadFlightPlans();
         // 把禁飞区数据传给飞行器管理器用于闯入检测
         if (State.aircraftManager) {
             var zones = State.noflyEntities.map(function (e) {
@@ -460,6 +464,13 @@ function bindUIEvents() {
         result = State.aircraftManager.submitFlightPlan(dlng, dlat, alng, alat);
         if (result.startsWith('ok:')) {
             dom('fp-result').innerHTML = '<span style="color:#0f0;">✓ 批准！新飞行器: ' + result.split(':')[1] + '</span>';
+            // 持久化保存
+            if (!State._flightPlans) State._flightPlans = [];
+            State._flightPlans.push({
+                name: '计划 ' + new Date().toLocaleTimeString(),
+                depLng: dlng, depLat: dlat, arrLng: alng, arrLat: alat,
+            });
+            _saveFlightPlans();
             setTimeout(function () {
                 State.fpPickMode = null;
                 dom('fp-pick-hint').style.display = 'none';
@@ -496,6 +507,7 @@ function bindUIEvents() {
     });
     dom('btn-clear-nfz').addEventListener('click', function () {
         _clearCustomNfz();
+        _saveNfz();  // 持久化清除
         State.nfzDrawMode = false;
         State.nfzPoints = [];
         _clearNfzTemp();
@@ -562,6 +574,49 @@ function _finishNfzDrawing() {
     }
     State.nfzPoints = [];
     _clearNfzTemp();
+    // 持久化保存
+    _saveNfz();
+}
+
+function _saveNfz() {
+    var city = State.currentCity;
+    if (!city) return;
+    var zones = State.customNfz.map(function (z) {
+        return { lon: z.lon, lat: z.lat, r: z.r, n: z.n };
+    });
+    fetch('/api/nfz/' + city, { method: 'POST', body: JSON.stringify(zones) }).catch(function () {});
+}
+
+function _loadNfz() {
+    var city = State.currentCity;
+    if (!city) return;
+    fetch('/api/nfz/' + city)
+        .then(function (r) { return r.json(); })
+        .then(function (zones) {
+            _clearCustomNfz();
+            for (var i = 0; i < zones.length; i++) {
+                var z = zones[i];
+                // 绘制多边形（简化：用圆表示）
+                var circle = State.viewer.entities.add({
+                    position: Cesium.Cartesian3.fromDegrees(z.lon, z.lat),
+                    ellipse: {
+                        semiMajorAxis: z.r, semiMinorAxis: z.r,
+                        material: Cesium.Color.RED.withAlpha(0.2),
+                        outline: true, outlineColor: Cesium.Color.RED.withAlpha(0.6), outlineWidth: 2,
+                    },
+                    label: {
+                        text: z.n, font: '11px sans-serif', fillColor: Cesium.Color.RED,
+                        verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+                        pixelOffset: new Cesium.Cartesian2(0, -10),
+                    },
+                });
+                circle._isCustomNfz = true;
+                State.customNfz.push(z);
+            }
+            if (State.aircraftManager && zones.length > 0) {
+                State.aircraftManager.setNoFlyZones(zones);
+            }
+        }).catch(function () {});
 }
 
 function updateCityUI(key) {
@@ -604,6 +659,42 @@ function _clearPickMarkers() {
         }
         State._fpMarkers = [];
     }
+}
+
+// 飞行计划持久化
+function _saveFlightPlans() {
+    var city = State.currentCity;
+    if (!city || !State._flightPlans) return;
+    fetch('/api/flightplans/' + city, { method: 'POST', body: JSON.stringify(State._flightPlans) }).catch(function () {});
+}
+
+function _loadFlightPlans() {
+    var city = State.currentCity;
+    if (!city) return;
+    State._flightPlans = [];
+    fetch('/api/flightplans/' + city)
+        .then(function (r) { return r.json(); })
+        .then(function (plans) {
+            State._flightPlans = plans || [];
+            _renderFlightPlanList();
+        }).catch(function () {});
+}
+
+function _renderFlightPlanList() {
+    // 在飞行计划模态框中显示已保存的计划列表
+    var el = document.getElementById('fp-saved-list');
+    if (!el) return;
+    var plans = State._flightPlans || [];
+    if (plans.length === 0) { el.innerHTML = ''; return; }
+    var html = '<div style="font-size:11px;color:#889;margin-top:8px;border-top:1px solid rgba(255,255,255,0.08);padding-top:4px;">已保存计划</div>';
+    for (var i = 0; i < plans.length; i++) {
+        var p = plans[i];
+        html += '<div style="display:flex;align-items:center;font-size:10px;color:#aaa;padding:2px 0;">' +
+            '<span style="flex:1;">' + (p.name || '计划' + (i+1)) + '</span>' +
+            '<button onclick="State._flightPlans.splice(' + i + ',1);_saveFlightPlans();_renderFlightPlanList();" style="background:none;border:none;color:#f44;cursor:pointer;font-size:12px;">×</button>' +
+            '</div>';
+    }
+    el.innerHTML = html;
 }
 
 // ============ 渲染循环 ============

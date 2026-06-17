@@ -16,6 +16,8 @@ from io import BytesIO
 PORT = 8080
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 IMAGERY_DIR = os.path.join(PROJECT_DIR, "data", "imagery")
+NFZ_DIR = os.path.join(PROJECT_DIR, "data", "nfz")
+FP_DIR = os.path.join(PROJECT_DIR, "data", "flightplans")
 
 # 尝试导入 terrain 依赖
 try:
@@ -146,6 +148,45 @@ class MapRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=PROJECT_DIR, **kwargs)
 
     def do_GET(self):
+        # 禁飞区数据 API
+        if self.path.startswith("/api/nfz/"):
+            city = self.path.split("/api/nfz/")[1].split("?")[0]
+            path = os.path.join(NFZ_DIR, f"{city}.json")
+            if os.path.exists(path):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(os.path.getsize(path)))
+                self.end_headers()
+                with open(path, "rb") as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                data = json.dumps([]).encode("utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            return
+
+        # 飞行计划数据 API
+        if self.path.startswith("/api/flightplans/"):
+            city = self.path.split("/api/flightplans/")[1].split("?")[0]
+            path = os.path.join(FP_DIR, f"{city}.json")
+            if os.path.exists(path):
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(os.path.getsize(path)))
+                self.end_headers()
+                with open(path, "rb") as f:
+                    self.wfile.write(f.read())
+            else:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                data = json.dumps([]).encode("utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            return
         # 本地图块服务（data/imagery/{z}/{x}/{y}.png）
         if self.path.startswith("/imagery/"):
             img_path = os.path.join(IMAGERY_DIR, self.path[len("/imagery/"):])
@@ -206,6 +247,39 @@ class MapRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         # 静态文件（包括 data/tiles/ 下的 GeoJSON）
         return super().do_GET()
+
+    def do_POST(self):
+        content_len = int(self.headers.get("Content-Length", 0))
+        body = self.rfile.read(content_len) if content_len > 0 else b"{}"
+
+        # 保存禁飞区
+        if self.path.startswith("/api/nfz/"):
+            city = self.path.split("/api/nfz/")[1]
+            os.makedirs(NFZ_DIR, exist_ok=True)
+            path = os.path.join(NFZ_DIR, f"{city}.json")
+            with open(path, "wb") as f:
+                f.write(body)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"ok":true}')
+            return
+
+        # 保存飞行计划
+        if self.path.startswith("/api/flightplans/"):
+            city = self.path.split("/api/flightplans/")[1]
+            os.makedirs(FP_DIR, exist_ok=True)
+            path = os.path.join(FP_DIR, f"{city}.json")
+            with open(path, "wb") as f:
+                f.write(body)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"ok":true}')
+            return
+
+        self.send_response(404)
+        self.end_headers()
 
     def end_headers(self):
         self.send_header("Access-Control-Allow-Origin", "*")
