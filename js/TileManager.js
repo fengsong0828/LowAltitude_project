@@ -10,9 +10,9 @@ var TileManager = (function () {
     var UNLOAD_DELAY_MS = 2000;   // 离开视口后延迟卸载
     var BUFFER_TILES = 0;          // 不预加载外围瓦片
     var UPDATE_THROTTLE_MS = 500;  // 视口变化检测间隔
-    var MAX_LOADED_TILES = 12;     // 最大同时加载瓦片数（西安87K建筑×每栋12面≈100万三角形，必须限制）
+    var MAX_LOADED_TILES = 8;      // 降至8块
     var MAX_CONCURRENT = 2;        // 并行加载数
-    var MAX_TOTAL_ENTITIES = 5000; // 场景总实体硬上限
+    var MAX_TOTAL_ENTITIES = 3000; // 场景总实体硬上限
 
     function TileManager(viewer, state, config) {
         this.viewer = viewer;

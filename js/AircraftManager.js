@@ -111,7 +111,7 @@ var AircraftManager = (function () {
             id: 'ac_' + ac.id,
             position: Cesium.Cartesian3.fromDegrees(ac.currentLng, ac.currentLat, ac.currentAlt),
             ellipsoid: {
-                radii: new Cesium.Cartesian3(20, 20, 4),
+                radii: new Cesium.Cartesian3(12, 12, 3),
                 material: color.withAlpha(0.9),
                 outline: true,
                 outlineColor: Cesium.Color.WHITE.withAlpha(0.4),
