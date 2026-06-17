@@ -394,7 +394,9 @@ html, body {
 .cv-close { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 4px; }
 .cv-close:hover { color: #fff; }
 .cv-footer { padding: 3px 10px; font-size: 10px; color: #666; text-align: center; background: rgba(0,0,0,0.3); }
-#cv-canvas { display: block; width: 100%; height: 220px; object-fit: contain; background: #0a0f19; }
+#cv-img-container { width: 320px; height: 220px; overflow: hidden; position: relative; background: #0a0f1a; margin: 0 auto; }
+#cv-tile-img { position: absolute; width: 256px; height: 256px; image-rendering: pixelated; }
+#cv-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
 @keyframes alert-pulse { 0%,100% { border-color: rgba(255,0,0,0.3); } 50% { border-color: rgba(255,0,0,0.7); } }
 .alert-active { animation: alert-pulse 2s infinite; }

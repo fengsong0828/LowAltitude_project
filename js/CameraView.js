@@ -1,21 +1,14 @@
 /**
- * CameraView - 飞行器摄像头 PIP 弹窗
- * 点击飞行器后弹窗显示正下方高倍卫星图，模拟第一视角实时画面
+ * CameraView v2 - 飞行器摄像头 PIP 弹窗
+ * 直接加载卫星图块（IMG标签），不再用Canvas绘制
  */
 var CameraView = (function () {
     'use strict';
 
-    var TILE_SIZE = 256;
-    var ZOOM_LEVEL = 17;  // 高倍率（约 75m 范围）
-
     function CameraView() {
         this.activeAircraft = null;
         this.callsign = '';
-        this.currentLat = 0;
-        this.currentLng = 0;
         this.isVisible = false;
-        this.updateTimer = null;
-
         this._createDOM();
     }
 
@@ -28,7 +21,15 @@ var CameraView = (function () {
             '<span class="cv-title" id="cv-title">机载摄像头</span>' +
             '<button class="cv-close" id="cv-close">&times;</button>' +
             '</div>' +
-            '<canvas id="cv-canvas" width="320" height="240"></canvas>' +
+            '<div id="cv-img-container" style="width:320px;height:220px;overflow:hidden;position:relative;background:#0a0f1a;">' +
+            '<img id="cv-tile-img" style="position:absolute;width:256px;height:256px;image-rendering:pixelated;" src="" onerror="this.style.display=\'none\'">' +
+            '<div id="cv-overlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;">' +
+            '<div style="position:absolute;top:50%;left:50%;width:30px;height:1px;background:#f44;transform:translate(-50%,0);"></div>' +
+            '<div style="position:absolute;top:50%;left:50%;width:1px;height:30px;background:#f44;transform:translate(0,-50%);"></div>' +
+            '<div style="position:absolute;top:50%;left:50%;width:8px;height:8px;border:1px solid #f44;border-radius:50%;transform:translate(-50%,-50%);"></div>' +
+            '<div style="position:absolute;top:50%;left:50%;color:#fff;font-size:10px;text-shadow:0 0 4px #000;transform:translate(-50%,-28px);white-space:nowrap;" id="cv-label">-</div>' +
+            '</div>' +
+            '</div>' +
             '<div class="cv-footer">' +
             '<span class="cv-coord" id="cv-coord">-</span>' +
             '</div>';
@@ -49,9 +50,6 @@ var CameraView = (function () {
         var title = document.getElementById('cv-title');
         if (title) title.textContent = callsign + ' 摄像头';
 
-        var dbg = document.getElementById('debug-panel');
-        if (dbg) dbg.textContent = '摄像头: ' + callsign + ' (' + lat.toFixed(4) + ',' + lng.toFixed(4) + ')';
-
         this.updatePosition(lat, lng);
     };
 
@@ -65,15 +63,32 @@ var CameraView = (function () {
     CameraView.prototype.updatePosition = function (lat, lng) {
         if (!this.isVisible) return;
 
-        this.currentLat = lat;
-        this.currentLng = lng;
+        var zoom = 17;
+        var xy = this._latLonToTileXY(lat, lng, zoom);
+        var cx = xy[0], cy = xy[1];
 
-        var coordEl = document.getElementById('cv-coord');
-        if (coordEl) {
-            coordEl.textContent = lat.toFixed(6) + ', ' + lng.toFixed(6) + ' (高' + ZOOM_LEVEL + '倍)';
+        var n = Math.pow(2, zoom);
+        var preciseX = (lng + 180) / 360 * n;
+        var preciseY = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n;
+        var offsetX = Math.round((preciseX - cx) * 256);
+        var offsetY = Math.round((preciseY - cy) * 256);
+
+        // 加载中心瓦片（本地优先）
+        var img = document.getElementById('cv-tile-img');
+        var label = document.getElementById('cv-label');
+        var coord = document.getElementById('cv-coord');
+
+        if (img) {
+            img.style.left = (160 - offsetX) + 'px';
+            img.style.top = (110 - offsetY) + 'px';
+            // 先尝试本地，失败静默
+            img.src = 'http://localhost:8080/imagery/' + zoom + '/' + cx + '/' + cy + '.png';
+            img.onerror = function () {
+                this.src = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + zoom + '/' + cy + '/' + cx;
+            };
         }
-
-        this._drawTile(lat, lng);
+        if (label) label.textContent = this.callsign;
+        if (coord) coord.textContent = lat.toFixed(6) + ', ' + lng.toFixed(6) + ' | zoom ' + zoom;
     };
 
     CameraView.prototype._latLonToTileXY = function (lat, lon, zoom) {
@@ -81,98 +96,6 @@ var CameraView = (function () {
         var x = Math.floor((lon + 180) / 360 * n);
         var y = Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n);
         return [x, y];
-    };
-
-    CameraView.prototype._drawTile = function (lat, lng) {
-        var canvas = document.getElementById('cv-canvas');
-        if (!canvas) return;
-        var ctx = canvas.getContext('2d');
-
-        var zoom = ZOOM_LEVEL;
-        var xy = this._latLonToTileXY(lat, lng, zoom);
-        var cx = xy[0], cy = xy[1];
-
-        // 先填充背景 + 加载文字
-        ctx.fillStyle = '#0a0f1a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#00d4ff';
-        ctx.font = '12px "Microsoft YaHei", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('加载中...', canvas.width / 2, canvas.height / 2);
-
-        // 绘制 3×3 瓦片网格（覆盖当前位置 + 周围）
-        var loaded = 0;
-        var self = this;
-
-        function drawCrosshair() {
-            // 十字准星
-            ctx.strokeStyle = '#ff4444';
-            ctx.lineWidth = 1.5;
-            var midX = canvas.width / 2;
-            var midY = canvas.height / 2;
-            ctx.beginPath();
-            ctx.moveTo(midX - 15, midY);
-            ctx.lineTo(midX + 15, midY);
-            ctx.moveTo(midX, midY - 15);
-            ctx.lineTo(midX, midY + 15);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.arc(midX, midY, 4, 0, Math.PI * 2);
-            ctx.stroke();
-
-            // 标签
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '10px monospace';
-            ctx.textAlign = 'center';
-            ctx.fillText(self.callsign + ' 正下方', midX, midY - 20);
-
-            ctx.fillStyle = '#888888';
-            ctx.font = '9px monospace';
-            ctx.fillText('zoom ' + zoom, midX, midY + 25);
-        }
-
-        // 加载中心瓦片
-        function loadTile(tx, ty, dx, dy) {
-            // 优先本地，回退 ESRI
-            var urls = [
-                'http://localhost:8080/imagery/' + zoom + '/' + tx + '/' + ty + '.png',
-                'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/' + zoom + '/' + ty + '/' + tx,
-            ];
-
-            function tryUrl(idx) {
-                if (idx >= urls.length) return;
-                var img = new Image();
-                img.onload = function () {
-                    ctx.drawImage(img, dx, dy, TILE_SIZE, TILE_SIZE);
-                    loaded++;
-                    if (loaded === 1) drawCrosshair();
-                };
-                img.onerror = function () {
-                    tryUrl(idx + 1);
-                };
-                img.src = urls[idx];
-            }
-
-            tryUrl(0);
-        }
-
-        // 瓦片偏移：当前位置在中心瓦片中的位置
-        var n = Math.pow(2, zoom);
-        var preciseX = (lng + 180) / 360 * n;
-        var preciseY = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * n;
-        var offsetX = (preciseX - cx) * TILE_SIZE;
-        var offsetY = (preciseY - cy) * TILE_SIZE;
-
-        // 中心瓦片
-        loadTile(cx, cy, TILE_SIZE / 2 - offsetX, TILE_SIZE / 2 - offsetY);
-
-        // 上下左右各一块（备用扩展）
-        setTimeout(function () {
-            loadTile(cx - 1, cy, TILE_SIZE / 2 - offsetX - TILE_SIZE, TILE_SIZE / 2 - offsetY);
-            loadTile(cx + 1, cy, TILE_SIZE / 2 - offsetX + TILE_SIZE, TILE_SIZE / 2 - offsetY);
-            loadTile(cx, cy - 1, TILE_SIZE / 2 - offsetX, TILE_SIZE / 2 - offsetY - TILE_SIZE);
-            loadTile(cx, cy + 1, TILE_SIZE / 2 - offsetX, TILE_SIZE / 2 - offsetY + TILE_SIZE);
-        }, 200);
     };
 
     return CameraView;
