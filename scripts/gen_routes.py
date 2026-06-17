@@ -1,286 +1,479 @@
 #!/usr/bin/env python3
-"""生成各城市特色飞行器路线——基于真实地理特征"""
-import json
-import os
-import math
+"""生成各城市真正独特的飞行器路线——每城地理特征完全不同"""
+import json, os, math
 
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT_DIR = os.path.join(PROJECT_DIR, "data", "aircraft")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(BASE, "data", "aircraft")
 
 def pt(lng, lat, alt): return [lng, lat, alt]
 
-# ============ 各城市特色路线定义 ============
-CITY_ROUTES = {
+# ====== 各城市独特坐标点（基于真实地理特征） ======
+
+ROUTES = {
     "beijing": {
-        "bbox": {"south": 39.85, "west": 116.25, "north": 40.05, "east": 116.55},
-        "aircraft": [
-            {"id": "BJD-01", "callsign": "京配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66",
-             "speed": 22, "route": "beijing_delivery"},
-            {"id": "BJD-02", "callsign": "京巡-02", "type": "patrol", "typeName": "城市巡检", "color": "#ff8800",
-             "speed": 16, "route": "beijing_patrol"},
-            {"id": "BJD-03", "callsign": "京测-03", "type": "survey", "typeName": "测绘勘察", "color": "#4488ff",
-             "speed": 12, "route": "beijing_survey"},
-            {"id": "BJD-04", "callsign": "京通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444",
-             "speed": 55, "route": "beijing_evtol"},
-            {"id": "BJD-05", "callsign": "京急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000",
-             "speed": 45, "route": "beijing_emergency"},
-        ]
+        "delivery": {
+            "callsign": "京配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66", "speed": 22,
+            "alt": 160,
+            "desc": "五环网格配送",
+            "points": [
+                [116.25,39.87,160],[116.35,39.87,160],[116.40,39.87,160],[116.45,39.87,160],[116.50,39.87,160],
+                [116.50,39.90,175],[116.45,39.90,175],[116.40,39.90,175],[116.35,39.90,175],[116.25,39.90,175],
+                [116.25,39.93,190],[116.35,39.93,190],[116.40,39.93,190],[116.45,39.93,190],[116.50,39.93,190],
+                [116.50,39.96,175],[116.45,39.96,175],[116.40,39.96,175],[116.35,39.96,175],[116.25,39.96,175],
+                [116.25,39.99,180],[116.35,39.99,180],[116.40,39.99,180],[116.45,39.99,180],[116.50,39.99,180],
+                [116.50,40.02,160],[116.45,40.02,160],[116.40,40.02,160],[116.35,40.02,160],[116.25,40.02,160],
+            ]
+        },
+        "patrol": {
+            "callsign": "京巡-02", "type": "patrol", "typeName": "环线巡检", "color": "#ff8800", "speed": 16,
+            "alt": 220,
+            "desc": "沿二环-三环-四环递进巡逻",
+            "points": [
+                [116.38,39.92,220],[116.43,39.91,220],[116.47,39.93,220],[116.44,39.97,220],
+                [116.38,39.99,220],[116.32,39.96,220],[116.30,39.91,220],[116.33,39.88,220],[116.38,39.92,220],
+            ]
+        },
+        "survey": {
+            "callsign": "京测-03", "type": "survey", "typeName": "中轴测绘", "color": "#4488ff", "speed": 12,
+            "alt": 350,
+            "desc": "沿南北中轴线往复测绘",
+            "points": [
+                [116.39,39.86,350],[116.39,39.89,350],[116.39,39.92,350],[116.39,39.95,350],
+                [116.39,39.98,350],[116.39,40.01,350],
+                [116.39,39.98,350],[116.39,39.95,350],[116.39,39.92,350],[116.39,39.89,350],[116.39,39.86,350],
+            ]
+        },
+        "evtol": {
+            "callsign": "京通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444", "speed": 55,
+            "alt": 800,
+            "desc": "大兴→首都机场走廊",
+            "points": [
+                [116.30,39.85,800],[116.35,39.90,800],[116.40,39.93,800],[116.42,39.96,800],
+                [116.45,40.00,800],[116.50,40.03,800],
+                [116.45,40.00,800],[116.42,39.96,800],[116.40,39.93,800],[116.35,39.90,800],[116.30,39.85,800],
+            ]
+        },
+        "emergency": {
+            "callsign": "京急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000", "speed": 45,
+            "alt": 280,
+            "desc": "快速环路应急覆盖",
+            "points": [
+                [116.45,39.88,280],[116.52,39.92,280],[116.48,39.98,280],[116.42,40.04,280],
+                [116.33,40.01,280],[116.28,39.94,280],[116.28,39.88,280],[116.35,39.84,280],[116.45,39.88,280],
+            ]
+        },
     },
     "shanghai": {
-        "bbox": {"south": 31.16, "west": 121.35, "north": 31.35, "east": 121.60},
-        "aircraft": [
-            {"id": "SHD-01", "callsign": "沪配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66",
-             "speed": 20, "route": "shanghai_delivery"},
-            {"id": "SHD-02", "callsign": "沪巡-02", "type": "patrol", "typeName": "浦江巡检", "color": "#ff8800",
-             "speed": 15, "route": "shanghai_patrol"},
-            {"id": "SHD-03", "callsign": "沪渡-03", "type": "ferry", "typeName": "跨江摆渡", "color": "#ffaa00",
-             "speed": 35, "route": "shanghai_ferry"},
-            {"id": "SHD-04", "callsign": "沪通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444",
-             "speed": 60, "route": "shanghai_evtol"},
-            {"id": "SHD-05", "callsign": "沪急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000",
-             "speed": 45, "route": "shanghai_emergency"},
-        ]
+        "delivery": {
+            "callsign": "沪配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66", "speed": 20,
+            "alt": 160,
+            "desc": "浦西浦东网格",
+            "points": [
+                [121.40,31.20,160],[121.45,31.20,160],[121.50,31.20,160],[121.55,31.20,160],
+                [121.55,31.22,170],[121.50,31.22,170],[121.45,31.22,170],[121.40,31.22,170],
+                [121.40,31.24,180],[121.45,31.24,180],[121.50,31.24,180],[121.55,31.24,180],
+                [121.55,31.26,170],[121.50,31.26,170],[121.45,31.26,170],[121.40,31.26,170],
+                [121.40,31.28,180],[121.45,31.28,180],[121.50,31.28,180],[121.55,31.28,180],
+                [121.55,31.30,160],[121.50,31.30,160],[121.45,31.30,160],[121.40,31.30,160],
+            ]
+        },
+        "patrol": {
+            "callsign": "沪巡-02", "type": "patrol", "typeName": "浦江巡检", "color": "#ff8800", "speed": 15,
+            "alt": 220,
+            "desc": "沿黄浦江S形巡逻",
+            "points": [
+                [121.50,31.32,220],[121.49,31.30,220],[121.48,31.28,220],[121.47,31.26,220],
+                [121.47,31.24,220],[121.48,31.22,220],[121.49,31.20,220],[121.50,31.18,220],
+                [121.49,31.20,220],[121.48,31.22,220],[121.47,31.24,220],[121.47,31.26,220],
+                [121.48,31.28,220],[121.49,31.30,220],[121.50,31.32,220],
+            ]
+        },
+        "ferry": {
+            "callsign": "沪渡-03", "type": "ferry", "typeName": "跨江摆渡", "color": "#ffaa00", "speed": 35,
+            "alt": 250,
+            "desc": "横跨黄浦江往返",
+            "points": [
+                [121.43,31.30,250],[121.52,31.30,250],
+                [121.52,31.26,250],[121.43,31.26,250],
+                [121.43,31.22,250],[121.52,31.22,250],
+                [121.52,31.18,250],[121.43,31.18,250],
+                [121.43,31.22,250],[121.52,31.22,250],
+                [121.52,31.26,250],[121.43,31.26,250],
+                [121.43,31.30,250],[121.52,31.30,250],
+            ]
+        },
+        "evtol": {
+            "callsign": "沪通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444", "speed": 60,
+            "alt": 800,
+            "desc": "虹桥→浦东机场快线",
+            "points": [
+                [121.38,31.20,800],[121.42,31.22,800],[121.46,31.24,800],[121.50,31.26,800],
+                [121.54,31.28,800],[121.58,31.30,800],
+                [121.54,31.28,800],[121.50,31.26,800],[121.46,31.24,800],[121.42,31.22,800],[121.38,31.20,800],
+            ]
+        },
+        "emergency": {
+            "callsign": "沪急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000", "speed": 45,
+            "alt": 280,
+            "desc": "外环高速应急",
+            "points": [
+                [121.40,31.32,280],[121.55,31.30,280],[121.60,31.26,280],[121.55,31.22,280],
+                [121.45,31.18,280],[121.38,31.18,280],[121.36,31.22,280],[121.38,31.28,280],[121.40,31.32,280],
+            ]
+        },
     },
     "guangzhou": {
-        "bbox": {"south": 23.05, "west": 113.20, "north": 23.20, "east": 113.45},
-        "aircraft": [
-            {"id": "GZD-01", "callsign": "穗配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66",
-             "speed": 18, "route": "guangzhou_delivery"},
-            {"id": "GZD-02", "callsign": "穗巡-02", "type": "patrol", "typeName": "珠水巡检", "color": "#ff8800",
-             "speed": 14, "route": "guangzhou_patrol"},
-            {"id": "GZD-03", "callsign": "穗渡-03", "type": "ferry", "typeName": "珠江摆渡", "color": "#ffaa00",
-             "speed": 35, "route": "guangzhou_ferry"},
-            {"id": "GZD-04", "callsign": "穗通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444",
-             "speed": 55, "route": "guangzhou_evtol"},
-            {"id": "GZD-05", "callsign": "穗急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000",
-             "speed": 40, "route": "guangzhou_emergency"},
-        ]
+        "delivery": {
+            "callsign": "穗配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66", "speed": 18,
+            "alt": 160,
+            "desc": "天河-海珠-越秀网格",
+            "points": [
+                [113.25,23.10,160],[113.30,23.10,160],[113.35,23.10,160],[113.40,23.10,160],
+                [113.40,23.12,170],[113.35,23.12,170],[113.30,23.12,170],[113.25,23.12,170],
+                [113.25,23.14,180],[113.30,23.14,180],[113.35,23.14,180],[113.40,23.14,180],
+                [113.40,23.16,170],[113.35,23.16,170],[113.30,23.16,170],[113.25,23.16,170],
+                [113.25,23.18,180],[113.30,23.18,180],[113.35,23.18,180],[113.40,23.18,180],
+            ]
+        },
+        "patrol": {
+            "callsign": "穗巡-02", "type": "patrol", "typeName": "珠水巡检", "color": "#ff8800", "speed": 14,
+            "alt": 220,
+            "desc": "沿珠江蜿蜒巡逻",
+            "points": [
+                [113.22,23.12,220],[113.26,23.11,220],[113.29,23.10,220],[113.32,23.10,220],
+                [113.35,23.11,220],[113.38,23.12,220],[113.40,23.14,220],
+                [113.38,23.12,220],[113.35,23.11,220],[113.32,23.10,220],
+                [113.29,23.10,220],[113.26,23.11,220],[113.22,23.12,220],
+            ]
+        },
+        "ferry": {
+            "callsign": "穗渡-03", "type": "ferry", "typeName": "珠江摆渡", "color": "#ffaa00", "speed": 35,
+            "alt": 250,
+            "desc": "珠江两岸往返摆渡",
+            "points": [
+                [113.24,23.10,250],[113.39,23.10,250],
+                [113.39,23.14,250],[113.24,23.14,250],
+                [113.24,23.17,250],[113.39,23.17,250],
+                [113.39,23.14,250],[113.24,23.14,250],
+                [113.24,23.10,250],[113.39,23.10,250],
+            ]
+        },
+        "evtol": {
+            "callsign": "穗通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444", "speed": 55,
+            "alt": 800,
+            "desc": "白云→天河→琶洲通勤线",
+            "points": [
+                [113.28,23.18,800],[113.32,23.16,800],[113.35,23.14,800],[113.38,23.12,800],
+                [113.40,23.10,800],
+                [113.38,23.12,800],[113.35,23.14,800],[113.32,23.16,800],[113.28,23.18,800],
+            ]
+        },
+        "emergency": {
+            "callsign": "穗急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000", "speed": 40,
+            "alt": 280,
+            "desc": "环城高速应急覆盖",
+            "points": [
+                [113.30,23.08,280],[113.42,23.10,280],[113.44,23.15,280],[113.40,23.20,280],
+                [113.32,23.22,280],[113.24,23.20,280],[113.20,23.15,280],[113.25,23.09,280],[113.30,23.08,280],
+            ]
+        },
     },
     "shenzhen": {
-        "bbox": {"south": 22.48, "west": 113.85, "north": 22.65, "east": 114.20},
-        "aircraft": [
-            {"id": "SZD-01", "callsign": "深配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66",
-             "speed": 22, "route": "shenzhen_delivery"},
-            {"id": "SZD-02", "callsign": "深巡-02", "type": "patrol", "typeName": "湾区巡检", "color": "#ff8800",
-             "speed": 16, "route": "shenzhen_patrol"},
-            {"id": "SZD-03", "callsign": "深跨-03", "type": "ferry", "typeName": "跨海湾通行", "color": "#ffaa00",
-             "speed": 40, "route": "shenzhen_ferry"},
-            {"id": "SZD-04", "callsign": "深通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444",
-             "speed": 58, "route": "shenzhen_evtol"},
-            {"id": "SZD-05", "callsign": "深急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000",
-             "speed": 45, "route": "shenzhen_emergency"},
-        ]
+        "delivery": {
+            "callsign": "深配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66", "speed": 22,
+            "alt": 160,
+            "desc": "南山-福田-罗湖网格",
+            "points": [
+                [113.90,22.50,160],[113.95,22.50,160],[114.00,22.50,160],[114.05,22.50,160],[114.10,22.50,160],
+                [114.10,22.53,170],[114.05,22.53,170],[114.00,22.53,170],[113.95,22.53,170],[113.90,22.53,170],
+                [113.90,22.56,180],[113.95,22.56,180],[114.00,22.56,180],[114.05,22.56,180],[114.10,22.56,180],
+                [114.10,22.59,170],[114.05,22.59,170],[114.00,22.59,170],[113.95,22.59,170],[113.90,22.59,170],
+                [113.90,22.62,180],[113.95,22.62,180],[114.00,22.62,180],[114.05,22.62,180],[114.10,22.62,180],
+            ]
+        },
+        "patrol": {
+            "callsign": "深巡-02", "type": "patrol", "typeName": "湾区巡检", "color": "#ff8800", "speed": 16,
+            "alt": 220,
+            "desc": "沿深圳湾海岸线巡逻",
+            "points": [
+                [113.88,22.50,220],[113.92,22.48,220],[113.98,22.47,220],[114.05,22.48,220],
+                [114.10,22.50,220],[114.13,22.53,220],[114.15,22.57,220],
+                [114.13,22.53,220],[114.10,22.50,220],[114.05,22.48,220],
+                [113.98,22.47,220],[113.92,22.48,220],[113.88,22.50,220],
+            ]
+        },
+        "ferry": {
+            "callsign": "深跨-03", "type": "ferry", "typeName": "跨海湾通行", "color": "#ffaa00", "speed": 40,
+            "alt": 260,
+            "desc": "深圳湾→香港往返",
+            "points": [
+                [113.95,22.48,260],[114.10,22.46,260],
+                [114.10,22.52,260],[113.95,22.54,260],
+                [113.95,22.58,260],[114.10,22.56,260],
+                [114.10,22.62,260],[113.95,22.64,260],
+                [113.95,22.58,260],[114.10,22.56,260],
+                [113.95,22.52,260],[114.10,22.50,260],
+                [113.95,22.48,260],[114.10,22.46,260],
+            ]
+        },
+        "evtol": {
+            "callsign": "深通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444", "speed": 58,
+            "alt": 800,
+            "desc": "宝安→南山→福田CBD通勤",
+            "points": [
+                [113.85,22.58,800],[113.92,22.55,800],[113.98,22.53,800],[114.05,22.54,800],
+                [114.10,22.56,800],
+                [114.05,22.54,800],[113.98,22.53,800],[113.92,22.55,800],[113.85,22.58,800],
+            ]
+        },
+        "emergency": {
+            "callsign": "深急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000", "speed": 45,
+            "alt": 280,
+            "desc": "特区全域应急覆盖",
+            "points": [
+                [113.88,22.64,280],[113.95,22.65,280],[114.05,22.63,280],[114.12,22.58,280],
+                [114.15,22.52,280],[114.10,22.47,280],[114.00,22.45,280],[113.88,22.47,280],[113.88,22.64,280],
+            ]
+        },
     },
     "chongqing": {
-        "bbox": {"south": 29.50, "west": 106.47, "north": 29.67, "east": 106.72},
-        "aircraft": [
-            {"id": "CQD-01", "callsign": "渝配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66",
-             "speed": 20, "route": "chongqing_delivery"},
-            {"id": "CQD-02", "callsign": "渝巡-02", "type": "patrol", "typeName": "山城巡检", "color": "#ff8800",
-             "speed": 15, "route": "chongqing_patrol"},
-            {"id": "CQD-03", "callsign": "渝渡-03", "type": "ferry", "typeName": "两江摆渡", "color": "#ffaa00",
-             "speed": 35, "route": "chongqing_ferry"},
-            {"id": "CQD-04", "callsign": "渝通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444",
-             "speed": 50, "route": "chongqing_evtol"},
-            {"id": "CQD-05", "callsign": "渝急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000",
-             "speed": 40, "route": "chongqing_emergency"},
-        ]
+        "delivery": {
+            "callsign": "渝配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66", "speed": 20,
+            "alt": 180,
+            "desc": "渝中-江北-南岸网格",
+            "points": [
+                [106.50,29.53,180],[106.55,29.53,180],[106.60,29.53,180],[106.65,29.53,180],
+                [106.65,29.55,190],[106.60,29.55,190],[106.55,29.55,190],[106.50,29.55,190],
+                [106.50,29.57,200],[106.55,29.57,200],[106.60,29.57,200],[106.65,29.57,200],
+                [106.65,29.59,190],[106.60,29.59,190],[106.55,29.59,190],[106.50,29.59,190],
+                [106.50,29.61,200],[106.55,29.61,200],[106.60,29.61,200],[106.65,29.61,200],
+            ]
+        },
+        "patrol": {
+            "callsign": "渝巡-02", "type": "patrol", "typeName": "山城巡检", "color": "#ff8800", "speed": 15,
+            "alt": 250,
+            "desc": "爬升式山城巡逻",
+            "points": [
+                [106.52,29.52,200],[106.57,29.52,220],[106.62,29.54,240],[106.65,29.56,260],
+                [106.63,29.58,280],[106.58,29.60,300],[106.53,29.59,320],[106.50,29.57,340],
+                [106.52,29.55,320],[106.55,29.53,280],[106.52,29.52,200],
+            ]
+        },
+        "ferry": {
+            "callsign": "渝渡-03", "type": "ferry", "typeName": "两江摆渡", "color": "#ffaa00", "speed": 35,
+            "alt": 260,
+            "desc": "长江+嘉陵江交汇摆渡",
+            "points": [
+                [106.55,29.55,260],[106.62,29.57,260],
+                [106.62,29.60,260],[106.55,29.62,260],
+                [106.55,29.58,260],[106.50,29.56,260],[106.55,29.55,260],
+            ]
+        },
+        "evtol": {
+            "callsign": "渝通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444", "speed": 50,
+            "alt": 850,
+            "desc": "江北→渝中→南岸通勤",
+            "points": [
+                [106.55,29.60,850],[106.57,29.58,850],[106.58,29.56,850],[106.57,29.54,850],
+                [106.55,29.52,850],
+                [106.57,29.54,850],[106.58,29.56,850],[106.57,29.58,850],[106.55,29.60,850],
+            ]
+        },
+        "emergency": {
+            "callsign": "渝急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000", "speed": 40,
+            "alt": 300,
+            "desc": "山城快速应急",
+            "points": [
+                [106.48,29.52,300],[106.55,29.50,300],[106.62,29.53,300],[106.67,29.56,300],
+                [106.65,29.60,300],[106.58,29.64,300],[106.50,29.62,300],[106.47,29.56,300],[106.48,29.52,300],
+            ]
+        },
     },
     "chengdu": {
-        "bbox": {"south": 30.60, "west": 103.95, "north": 30.75, "east": 104.20},
-        "aircraft": [
-            {"id": "CDD-01", "callsign": "蓉配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66",
-             "speed": 18, "route": "chengdu_delivery"},
-            {"id": "CDD-02", "callsign": "蓉巡-02", "type": "patrol", "typeName": "环城巡检", "color": "#ff8800",
-             "speed": 14, "route": "chengdu_patrol"},
-            {"id": "CDD-03", "callsign": "蓉测-03", "type": "survey", "typeName": "测绘勘察", "color": "#4488ff",
-             "speed": 11, "route": "chengdu_survey"},
-            {"id": "CDD-04", "callsign": "蓉通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444",
-             "speed": 52, "route": "chengdu_evtol"},
-            {"id": "CDD-05", "callsign": "蓉急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000",
-             "speed": 42, "route": "chengdu_emergency"},
-        ]
+        "delivery": {
+            "callsign": "蓉配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66", "speed": 18,
+            "alt": 160,
+            "desc": "主城五区网格配送",
+            "points": [
+                [104.00,30.62,160],[104.05,30.62,160],[104.10,30.62,160],[104.15,30.62,160],
+                [104.15,30.64,170],[104.10,30.64,170],[104.05,30.64,170],[104.00,30.64,170],
+                [104.00,30.66,180],[104.05,30.66,180],[104.10,30.66,180],[104.15,30.66,180],
+                [104.15,30.68,170],[104.10,30.68,170],[104.05,30.68,170],[104.00,30.68,170],
+                [104.00,30.70,180],[104.05,30.70,180],[104.10,30.70,180],[104.15,30.70,180],
+            ]
+        },
+        "patrol": {
+            "callsign": "蓉巡-02", "type": "patrol", "typeName": "环城巡检", "color": "#ff8800", "speed": 14,
+            "alt": 220,
+            "desc": "一环二环三环递进",
+            "points": [
+                [104.03,30.65,220],[104.07,30.63,220],[104.12,30.64,220],[104.14,30.67,220],
+                [104.11,30.71,220],[104.06,30.72,220],[104.01,30.69,220],[104.00,30.65,220],[104.03,30.65,220],
+            ]
+        },
+        "survey": {
+            "callsign": "蓉测-03", "type": "survey", "typeName": "测绘勘察", "color": "#4488ff", "speed": 11,
+            "alt": 350,
+            "desc": "螺旋测绘天府新区",
+            "points": [
+                [104.06,30.66,350],[104.08,30.65,350],[104.10,30.66,350],[104.09,30.68,350],
+                [104.07,30.69,350],[104.04,30.68,350],[104.03,30.66,350],[104.04,30.64,350],
+                [104.06,30.63,350],[104.08,30.64,350],[104.06,30.66,350],
+            ]
+        },
+        "evtol": {
+            "callsign": "蓉通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444", "speed": 52,
+            "alt": 800,
+            "desc": "双流→市中心→天府通勤",
+            "points": [
+                [103.97,30.58,800],[104.02,30.62,800],[104.06,30.65,800],[104.10,30.68,800],
+                [104.14,30.71,800],
+                [104.10,30.68,800],[104.06,30.65,800],[104.02,30.62,800],[103.97,30.58,800],
+            ]
+        },
+        "emergency": {
+            "callsign": "蓉急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000", "speed": 42,
+            "alt": 280,
+            "desc": "全域快速应急覆盖",
+            "points": [
+                [104.00,30.60,280],[104.15,30.62,280],[104.17,30.66,280],[104.14,30.72,280],
+                [104.08,30.74,280],[104.02,30.72,280],[103.98,30.66,280],[104.00,30.60,280],
+            ]
+        },
     },
     "xian": {
-        "bbox": {"south": 34.20, "west": 108.85, "north": 34.35, "east": 109.06},
-        "aircraft": [
-            {"id": "XAD-01", "callsign": "陕配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66",
-             "speed": 20, "route": "xian_delivery"},
-            {"id": "XAD-02", "callsign": "陕巡-02", "type": "patrol", "typeName": "城墙巡检", "color": "#ff8800",
-             "speed": 15, "route": "xian_patrol"},
-            {"id": "XAD-03", "callsign": "陕测-03", "type": "survey", "typeName": "遗址勘察", "color": "#4488ff",
-             "speed": 10, "route": "xian_survey"},
-            {"id": "XAD-04", "callsign": "陕通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444",
-             "speed": 50, "route": "xian_evtol"},
-            {"id": "XAD-05", "callsign": "陕急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000",
-             "speed": 42, "route": "xian_emergency"},
-        ]
+        "delivery": {
+            "callsign": "陕配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66", "speed": 20,
+            "alt": 160,
+            "desc": "棋盘式网格配送",
+            "points": [
+                [108.88,34.23,160],[108.93,34.23,160],[108.98,34.23,160],[109.03,34.23,160],
+                [109.03,34.25,170],[108.98,34.25,170],[108.93,34.25,170],[108.88,34.25,170],
+                [108.88,34.27,180],[108.93,34.27,180],[108.98,34.27,180],[109.03,34.27,180],
+                [109.03,34.29,170],[108.98,34.29,170],[108.93,34.29,170],[108.88,34.29,170],
+                [108.88,34.31,180],[108.93,34.31,180],[108.98,34.31,180],[109.03,34.31,180],
+            ]
+        },
+        "patrol": {
+            "callsign": "陕巡-02", "type": "patrol", "typeName": "城墙巡检", "color": "#ff8800", "speed": 15,
+            "alt": 220,
+            "desc": "沿明城墙遗址四方巡逻",
+            "points": [
+                [108.92,34.26,220],[108.96,34.25,220],[109.00,34.26,220],[109.01,34.28,220],
+                [108.98,34.30,220],[108.94,34.31,220],[108.90,34.29,220],[108.90,34.27,220],[108.92,34.26,220],
+            ]
+        },
+        "survey": {
+            "callsign": "陕测-03", "type": "survey", "typeName": "遗址勘察", "color": "#4488ff", "speed": 10,
+            "alt": 350,
+            "desc": "兵马俑→大雁塔→钟楼测绘",
+            "points": [
+                [108.95,34.28,350],[108.97,34.26,350],[108.99,34.28,350],
+                [108.97,34.30,350],[108.94,34.30,350],[108.93,34.28,350],
+                [108.94,34.26,350],[108.95,34.28,350],
+            ]
+        },
+        "evtol": {
+            "callsign": "陕通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444", "speed": 50,
+            "alt": 800,
+            "desc": "咸阳→西安北→市中心通勤",
+            "points": [
+                [108.85,34.30,800],[108.92,34.28,800],[108.98,34.27,800],[109.02,34.26,800],
+                [109.04,34.24,800],
+                [109.02,34.26,800],[108.98,34.27,800],[108.92,34.28,800],[108.85,34.30,800],
+            ]
+        },
+        "emergency": {
+            "callsign": "陕急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000", "speed": 42,
+            "alt": 280,
+            "desc": "绕城高速应急覆盖",
+            "points": [
+                [108.86,34.24,280],[108.93,34.22,280],[109.02,34.24,280],[109.05,34.28,280],
+                [109.03,34.32,280],[108.96,34.34,280],[108.88,34.32,280],[108.86,34.24,280],
+            ]
+        },
     },
     "hangzhou": {
-        "bbox": {"south": 30.18, "west": 120.08, "north": 30.35, "east": 120.30},
-        "aircraft": [
-            {"id": "HZD-01", "callsign": "浙配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66",
-             "speed": 20, "route": "hangzhou_delivery"},
-            {"id": "HZD-02", "callsign": "浙巡-02", "type": "patrol", "typeName": "西湖巡检", "color": "#ff8800",
-             "speed": 14, "route": "hangzhou_patrol"},
-            {"id": "HZD-03", "callsign": "浙渡-03", "type": "ferry", "typeName": "钱江摆渡", "color": "#ffaa00",
-             "speed": 35, "route": "hangzhou_ferry"},
-            {"id": "HZD-04", "callsign": "浙通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444",
-             "speed": 52, "route": "hangzhou_evtol"},
-            {"id": "HZD-05", "callsign": "浙急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000",
-             "speed": 40, "route": "hangzhou_emergency"},
-        ]
+        "delivery": {
+            "callsign": "浙配-01", "type": "delivery", "typeName": "物流配送", "color": "#00cc66", "speed": 20,
+            "alt": 150,
+            "desc": "上城-西湖-滨江网格",
+            "points": [
+                [120.10,30.22,150],[120.15,30.22,150],[120.20,30.22,150],[120.25,30.22,150],
+                [120.25,30.24,160],[120.20,30.24,160],[120.15,30.24,160],[120.10,30.24,160],
+                [120.10,30.26,170],[120.15,30.26,170],[120.20,30.26,170],[120.25,30.26,170],
+                [120.25,30.28,160],[120.20,30.28,160],[120.15,30.28,160],[120.10,30.28,160],
+                [120.10,30.30,170],[120.15,30.30,170],[120.20,30.30,170],[120.25,30.30,170],
+            ]
+        },
+        "patrol": {
+            "callsign": "浙巡-02", "type": "patrol", "typeName": "西湖巡检", "color": "#ff8800", "speed": 14,
+            "alt": 200,
+            "desc": "绕西湖环湖巡逻",
+            "points": [
+                [120.14,30.25,200],[120.16,30.24,200],[120.17,30.25,200],[120.16,30.27,200],
+                [120.14,30.28,200],[120.12,30.27,200],[120.12,30.25,200],[120.14,30.24,200],[120.14,30.25,200],
+            ]
+        },
+        "ferry": {
+            "callsign": "浙渡-03", "type": "ferry", "typeName": "钱江摆渡", "color": "#ffaa00", "speed": 35,
+            "alt": 240,
+            "desc": "钱塘江两岸往返",
+            "points": [
+                [120.12,30.22,240],[120.26,30.22,240],
+                [120.26,30.26,240],[120.12,30.26,240],
+                [120.12,30.30,240],[120.26,30.30,240],
+                [120.26,30.26,240],[120.12,30.26,240],
+                [120.12,30.22,240],[120.26,30.22,240],
+            ]
+        },
+        "evtol": {
+            "callsign": "浙通-04", "type": "evtol", "typeName": "载人通勤", "color": "#ff4444", "speed": 52,
+            "alt": 800,
+            "desc": "萧山→钱江新城→西湖通勤",
+            "points": [
+                [120.28,30.22,800],[120.24,30.24,800],[120.20,30.26,800],[120.16,30.27,800],
+                [120.12,30.28,800],
+                [120.16,30.27,800],[120.20,30.26,800],[120.24,30.24,800],[120.28,30.22,800],
+            ]
+        },
+        "emergency": {
+            "callsign": "浙急-05", "type": "emergency", "typeName": "应急救援", "color": "#ff0000", "speed": 40,
+            "alt": 270,
+            "desc": "绕城应急全覆盖",
+            "points": [
+                [120.08,30.22,270],[120.16,30.20,270],[120.24,30.22,270],[120.28,30.26,270],
+                [120.26,30.30,270],[120.18,30.32,270],[120.10,30.30,270],[120.08,30.22,270],
+            ]
+        },
     },
 }
 
-# ============ 路线生成函数 ============
-def make_grid(bbox, alt, rows=5, cols=6):
-    s, w, n, e = bbox["south"], bbox["west"], bbox["north"], bbox["east"]
-    pts = []
-    for r in range(rows):
-        t = r / (rows - 1) if rows > 1 else 0
-        lat = s + t * (n - s)
-        l0 = w if r % 2 == 0 else e
-        l1 = e if r % 2 == 0 else w
-        for c in range(cols):
-            frac = c / (cols - 1) if cols > 1 else 0
-            pts.append([l0 + (l1 - l0) * frac, lat, alt + (r % 3) * 15])
-    if pts and pts[0] != pts[-1]:
-        pts.append(list(pts[0]))
-    return pts
-
-def make_rect_perimeter(bbox, alt, margin=0.08):
-    s, w, n, e = bbox["south"], bbox["west"], bbox["north"], bbox["east"]
-    ms = s + (n - s) * margin
-    mw = w + (e - w) * margin
-    mn = n - (n - s) * margin
-    me = e - (e - w) * margin
-    segs = 20
-    pts = []
-    # 上边 (右→左)
-    for i in range(segs):
-        pts.append([me - (me - mw) * i / segs, mn, alt + 20])
-    # 左边 (上→下)
-    for i in range(segs):
-        pts.append([mw, mn - (mn - ms) * i / segs, alt + 20])
-    # 下边 (左→右)
-    for i in range(segs):
-        pts.append([mw + (me - mw) * i / segs, ms, alt + 20])
-    # 右边 (下→上)
-    for i in range(segs):
-        pts.append([me, ms + (mn - ms) * i / segs, alt + 20])
-    pts.append(list(pts[0]))
-    return pts
-
-def make_spiral(bbox, alt, loops=3):
-    s, w, n, e = bbox["south"], bbox["west"], bbox["north"], bbox["east"]
-    cx, cy = (w + e) / 2, (s + n) / 2
-    rx, ry = (e - w) * 0.4, (n - s) * 0.4
-    pts = []
-    total = loops * 24
-    for i in range(total + 1):
-        a = (i / 24) * math.pi * 2
-        r_frac = i / total
-        r = max(rx, ry) * r_frac * 0.9 + 0.1 * max(rx, ry)
-        pts.append([cx + math.cos(a) * r * 0.7, cy + math.sin(a) * r, alt + math.sin(i * 0.3) * 15])
-    pts.append(list(pts[0]))
-    return pts
-
-def make_corridor(bbox, alt, axis="ew"):
-    s, w, n, e = bbox["south"], bbox["west"], bbox["north"], bbox["east"]
-    pts = []
-    if axis == "ew":
-        for i in range(12):
-            t = i / 11
-            pts.append([w + t * (e - w), (s + n) / 2 + (n - s) * 0.3 * math.sin(t * math.pi), alt + 20])
-    else:
-        for i in range(12):
-            t = i / 11
-            pts.append([(w + e) / 2 + (e - w) * 0.3 * math.sin(t * math.pi), s + t * (n - s), alt + 20])
-    pts.append(list(pts[0]))
-    return pts
-
-def make_river_cross(bbox, alt, crossings=4):
-    """模拟跨江路线"""
-    s, w, n, e = bbox["south"], bbox["west"], bbox["north"], bbox["east"]
-    mid_lat = (s + n) / 2
-    pts = []
-    for i in range(crossings * 2 + 1):
-        if i % 2 == 0:
-            pts.append([w + (e - w) * 0.15, mid_lat, alt + 50])  # 北岸
-        else:
-            pts.append([w + (e - w) * 0.85, mid_lat + 0.005 * (i % 4), alt + 80])  # 南岸
-    pts.append(list(pts[0]))
-    return pts
-
-def make_coast_patrol(bbox, alt):
-    """沿海湾巡检"""
-    s, w, n, e = bbox["south"], bbox["west"], bbox["north"], bbox["east"]
-    pts = []
-    for i in range(20):
-        t = i / 19
-        pts.append([w + t * (e - w), s + (n - s) * 0.3 * math.sin(t * math.pi * 2), alt + 15])
-    pts.append(list(pts[0]))
-    return pts
-
-
-# ============ 具体路线数据 ============
-def build_all_routes():
-    routes = {}
-    for city_key, city_data in CITY_ROUTES.items():
-        b = city_data["bbox"]
-        routes[city_key] = []
-
-        for ac in city_data["aircraft"]:
-            route_name = ac["route"]
-            alt = {"delivery": 160, "patrol": 220, "survey": 350, "evtol": 800, "ferry": 250, "emergency": 280}.get(ac["type"], 200)
-
-            if route_name.endswith("_delivery"):
-                r = make_grid(b, alt, 5, 6)
-            elif route_name.endswith("_patrol"):
-                if city_key in ("shenzhen",):
-                    r = make_coast_patrol(b, alt)
-                elif city_key in ("guangzhou", "shanghai"):
-                    r = make_river_cross(b, alt, 5)
-                elif city_key in ("xian",):
-                    r = make_rect_perimeter(b, alt, 0.06)
-                else:
-                    r = make_rect_perimeter(b, alt, 0.08)
-            elif route_name.endswith("_survey"):
-                r = make_spiral(b, alt)
-            elif route_name.endswith("_evtol"):
-                axis = "ew" if city_key in ("shanghai", "shenzhen", "beijing") else "ns"
-                r = make_corridor(b, alt + 100, axis)
-            elif route_name.endswith("_ferry"):
-                r = make_river_cross(b, alt, 4)
-            elif route_name.endswith("_emergency"):
-                r = make_rect_perimeter(b, alt + 40, 0.05)
-            else:
-                r = make_grid(b, alt, 4, 5)
-
-            ac_out = {
-                "id": ac["id"], "callsign": ac["callsign"],
-                "type": ac["type"], "typeName": ac["typeName"],
-                "color": ac["color"], "speed": ac["speed"],
-                "route": r, "battery": 95 - routes[city_key].__len__() * 3,
+def main():
+    os.makedirs(OUT, exist_ok=True)
+    total = 0
+    for city_key, routes in ROUTES.items():
+        acs = []
+        for route_key, cfg in routes.items():
+            ac = {
+                "id": f"{city_key[:3].upper()}-{len(acs)+1:02d}",
+                "callsign": cfg["callsign"],
+                "type": cfg["type"],
+                "typeName": cfg["typeName"],
+                "color": cfg["color"],
+                "speed": cfg["speed"],
+                "route": cfg["points"],
+                "battery": 95 - len(acs) * 3,
                 "status": "cruising",
             }
-            routes[city_key].append(ac_out)
-
-    return routes
-
-
-def main():
-    all_routes = build_all_routes()
-    os.makedirs(OUT_DIR, exist_ok=True)
-    for city_key, acs in all_routes.items():
+            acs.append(ac)
         out = {"city": city_key, "aircraft": acs}
-        path = os.path.join(OUT_DIR, f"{city_key}.json")
+        path = os.path.join(OUT, f"{city_key}.json")
         with open(path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=2)
         print(f"  {city_key}: {len(acs)} 架 → {path}")
-    print(f"\n  总计 {sum(len(v) for v in all_routes.values())} 架")
-
+        total += len(acs)
+    print(f"\n  总计 {total} 架")
 
 if __name__ == "__main__":
     main()
