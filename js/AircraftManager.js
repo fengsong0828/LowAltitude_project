@@ -50,8 +50,8 @@ var AircraftManager = (function () {
                 ac.status = ac.status || 'cruising';
                 ac.lowBattery = false;
                 ac.trailPoints = [];
-                this._createEntity(ac);
                 this.aircraft[ac.id] = { config: ac, routeEntity: null };
+                this._createEntity(ac);
                 this.aircraftList.push(ac);
             }
 
