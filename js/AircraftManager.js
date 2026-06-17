@@ -5,7 +5,8 @@
 var AircraftManager = (function () {
     'use strict';
 
-    var MAX_AIRCRAFT = 20;  // 飞行器数量上限
+    var FLEET_URL = 'data/aircraft/';  // 按城市分文件 {city}.json
+    var MAX_AIRCRAFT = 20;               // 飞行器数量上限
 
     function AircraftManager(viewer, state, alertSystem, cameraView) {
         this.viewer = viewer;
