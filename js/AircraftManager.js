@@ -5,7 +5,7 @@
 var AircraftManager = (function () {
     'use strict';
 
-    var FLEET_URL = 'data/aircraft/fleet.json';
+    var FLEET_URL = 'data/aircraft/';  // 按城市分文件 {city}.json
 
     function AircraftManager(viewer, state, alertSystem, cameraView) {
         this.viewer = viewer;
@@ -27,12 +27,12 @@ var AircraftManager = (function () {
         this._debug('loading: ' + cityKey);
 
         try {
-            this._debug('fetching fleet.json...');
-            var resp = await fetch(FLEET_URL);
+            this._debug('fetching ' + cityKey + '.json...');
+            var resp = await fetch(FLEET_URL + cityKey + '.json');
             if (!resp.ok) { this._debug('FETCH FAIL: ' + resp.status); return; }
             this._debug('fetched OK, parsing...');
-            var allFleets = await resp.json();
-            var acList = allFleets[cityKey];
+            var data = await resp.json();
+            var acList = data.aircraft || [];
             if (!acList || acList.length === 0) { this._debug('NO AIRCRAFT for ' + cityKey); return; }
             this._debug('got ' + acList.length + ' aircraft, creating entities...');
 

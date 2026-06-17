@@ -10,9 +10,8 @@ var TileManager = (function () {
     var UNLOAD_DELAY_MS = 2000;   // 离开视口后延迟卸载
     var BUFFER_TILES = 0;          // 不预加载外围瓦片
     var UPDATE_THROTTLE_MS = 500;  // 视口变化检测间隔
-    var MAX_LOADED_TILES = 8;      // 降至8块
+    var MAX_LOADED_TILES = 8;      // 最大同时加载瓦片数
     var MAX_CONCURRENT = 2;        // 并行加载数
-    var MAX_TOTAL_ENTITIES = 3000; // 场景总实体硬上限
 
     function TileManager(viewer, state, config) {
         this.viewer = viewer;
@@ -175,10 +174,6 @@ var TileManager = (function () {
         var loadedCount = Object.keys(this.loadedTiles).length;
         if (loadedCount >= MAX_LOADED_TILES) return;
 
-        // 场景总实体数硬限制（防止西安等大城市OOM）
-        var totalEntities = this.viewer.entities.values.length;
-        if (totalEntities > MAX_TOTAL_ENTITIES) return;
-
         // 限制本次加载数量
         var maxToLoad = MAX_LOADED_TILES - loadedCount;
         if (toLoad.length > maxToLoad) {
@@ -291,15 +286,10 @@ var TileManager = (function () {
         }
         this.pendingUnload = {};
 
-        // 立即移除所有已加载瓦片的实体
+        // 逐个调用 _unloadTile（含 _removeFromEntityArrays）
         var keys = Object.keys(this.loadedTiles);
         for (var i = 0; i < keys.length; i++) {
-            var tile = this.loadedTiles[keys[i]];
-            if (tile && tile.entities) {
-                for (var j = 0; j < tile.entities.length; j++) {
-                    this.viewer.entities.remove(tile.entities[j]);
-                }
-            }
+            this._unloadTile(keys[i]);
         }
         this.loadedTiles = {};
         this.visibleTileKeys = {};
