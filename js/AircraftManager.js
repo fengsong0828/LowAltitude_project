@@ -634,5 +634,37 @@ var AircraftManager = (function () {
         return 'ok:' + id;
     };
 
+    // 从后端 WebSocket 更新飞行器位置
+    AircraftManager.prototype.updateFromServer = function (droneStates) {
+        for (var i = 0; i < droneStates.length; i++) {
+            var s = droneStates[i];
+            var entry = this.aircraft[s.id];
+            if (!entry) {
+                // 新飞行器（来自飞行计划等），动态创建
+                var ac = {
+                    id: s.id, callsign: s.callsign,
+                    type: s.type, typeName: s.typeName, color: s.color, speed: s.speed,
+                    route: [], currentLng: s.lng, currentLat: s.lat, currentAlt: s.alt,
+                    routeIndex: 0, routeProgress: s.routeProgress || 0, heading: s.heading,
+                    battery: s.battery, moving: true, status: s.status || 'cruising',
+                    lowBattery: false, trailPoints: [],
+                };
+                this.aircraft[ac.id] = { config: ac, routeEntity: null };
+                this._createEntity(ac);
+                this.aircraftList.push(ac);
+            }
+            if (entry && entry.config) {
+                var ac = entry.config;
+                ac.currentLng = s.lng; ac.currentLat = s.lat; ac.currentAlt = s.alt;
+                ac.heading = s.heading; ac.battery = s.battery;
+                ac.status = s.status || 'cruising';
+                if (entry.entity) {
+                    entry.entity.position = Cesium.Cartesian3.fromDegrees(s.lng, s.lat, s.alt);
+                }
+            }
+        }
+        this._updatePanel();
+    };
+
     return AircraftManager;
 })();

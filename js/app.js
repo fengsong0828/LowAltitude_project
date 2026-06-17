@@ -158,6 +158,11 @@ async function switchCity(key) {
     clearScene();
     // v2.0: 先清飞行器，再清瓦片（TileManager._unloadAll 内部处理）
         if (State.aircraftManager) {
+            // 尝试后端仿真引擎
+            if (State.engineClient && State.engineClient.useBackend) {
+                State.engineClient.loadCity(key);
+            }
+            // 前端仿真作为保底
             await State.aircraftManager.loadCity(key);
             // 创建空域网格
             var bbox = State.tileManager.getCityBBox();
@@ -295,7 +300,14 @@ function bindUIEvents() {
         State.viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(c.lon, c.lat, c.alt), orientation: { heading: Cesium.Math.toRadians(0), pitch: Cesium.Math.toRadians(-90), roll: 0 }, duration: 1.2 });
     });
     dom('btn-commloss').addEventListener('click', function () {
-        if (State.aircraftManager) State.aircraftManager.testCommLoss();
+        if (State.aircraftManager) {
+            if (State.engineClient && State.engineClient.useBackend) {
+                var ac = State.aircraftManager.aircraftList.find(function (a) { return a.id === State.aircraftManager.selectedId; });
+                if (ac) State.engineClient.sendCommLoss(ac.id);
+            } else {
+                State.aircraftManager.testCommLoss();
+            }
+        }
     });
     dom('btn-flightplan').addEventListener('click', function () {
         var modal = document.getElementById('flightplan-modal');
@@ -344,7 +356,22 @@ function bindUIEvents() {
             dom('fp-result').innerHTML = '<span style="color:#f44;">请输入有效坐标</span>';
             return;
         }
-        var result = State.aircraftManager.submitFlightPlan(dlng, dlat, alng, alat);
+        var result;
+        if (State.engineClient && State.engineClient.useBackend) {
+            result = State.engineClient.submitFlightPlan(dlng, dlat, alng, alat);
+            if (result === 'submitted') {
+                dom('fp-result').innerHTML = '<span style="color:#0f0;">✓ 已提交后端评估，新飞行器将自动出现</span>';
+                setTimeout(function () {
+                    State.fpPickMode = null; dom('fp-pick-hint').style.display = 'none';
+                    _clearPickMarkers();
+                    document.getElementById('flightplan-modal').style.display = 'none';
+                    var overlay = document.getElementById('flightplan-overlay');
+                    if (overlay) overlay.style.display = 'none';
+                }, 1500);
+                return;
+            }
+        }
+        result = State.aircraftManager.submitFlightPlan(dlng, dlat, alng, alat);
         if (result.startsWith('ok:')) {
             dom('fp-result').innerHTML = '<span style="color:#0f0;">✓ 批准！新飞行器: ' + result.split(':')[1] + '</span>';
             setTimeout(function () {
@@ -435,6 +462,11 @@ async function main() {
         State.cameraView = new CameraView();
         State.aircraftManager = new AircraftManager(State.viewer, State, State.alertSystem, State.cameraView);
         console.log('[Aircraft] v2.0 模块已就绪');
+
+        // 后端仿真引擎客户端
+        State.engineClient = new EngineClient(State.aircraftManager, State.alertSystem);
+        State.engineClient.connect();
+
         var dbg = document.getElementById('debug-panel');
         if (dbg) dbg.textContent = '舰队: 模块已初始化, 等待选择城市';
 
