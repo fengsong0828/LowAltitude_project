@@ -273,6 +273,7 @@ function bindUIEvents() {
     });
     dom('btn-flightplan').addEventListener('click', function () {
         var modal = document.getElementById('flightplan-modal');
+        var overlay = document.getElementById('flightplan-overlay');
         if (modal) {
             var bbox = State.tileManager.getCityBBox();
             if (bbox) {
@@ -282,11 +283,14 @@ function bindUIEvents() {
                 dom('fp-arr-lat').value = bbox.north.toFixed(4);
             }
             modal.style.display = 'block';
+            if (overlay) overlay.style.display = 'block';
             dom('fp-result').textContent = '';
         }
     });
     dom('btn-fp-close').addEventListener('click', function () {
         document.getElementById('flightplan-modal').style.display = 'none';
+        var overlay = document.getElementById('flightplan-overlay');
+        if (overlay) overlay.style.display = 'none';
     });
     dom('btn-fp-submit').addEventListener('click', function () {
         if (!State.aircraftManager) return;
@@ -301,7 +305,11 @@ function bindUIEvents() {
         var result = State.aircraftManager.submitFlightPlan(dlng, dlat, alng, alat);
         if (result.startsWith('ok:')) {
             dom('fp-result').innerHTML = '<span style="color:#0f0;">✓ 批准！新飞行器: ' + result.split(':')[1] + '</span>';
-            setTimeout(function () { document.getElementById('flightplan-modal').style.display = 'none'; }, 1500);
+            setTimeout(function () {
+                document.getElementById('flightplan-modal').style.display = 'none';
+                var overlay = document.getElementById('flightplan-overlay');
+                if (overlay) overlay.style.display = 'none';
+            }, 1500);
         } else {
             dom('fp-result').innerHTML = '<span style="color:#f44;">✗ ' + result + '</span>';
         }

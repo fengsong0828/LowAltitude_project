@@ -143,7 +143,8 @@
     <div id="debug-panel" style="position:absolute;bottom:36px;left:260px;color:#0f0;font-size:10px;z-index:300;background:rgba(0,0,0,0.8);padding:4px 8px;border-radius:4px;cursor:pointer;" onclick="this.style.display='none'" title="点击关闭">舰队: 等待加载...</div>
 
     <!-- 飞行计划模态框 -->
-    <div id="flightplan-modal" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:250;background:rgba(15,25,40,0.95);border:1px solid rgba(0,212,255,0.3);border-radius:10px;padding:16px;width:320px;color:#e0e8f0;">
+    <div id="flightplan-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:998;background:rgba(0,0,0,0.5);"></div>
+    <div id="flightplan-modal" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:999;background:rgba(15,25,40,0.95);border:1px solid rgba(0,212,255,0.3);border-radius:10px;padding:16px;width:320px;color:#e0e8f0;">
         <div style="font-size:14px;font-weight:600;margin-bottom:12px;color:#00d4ff;">提交飞行计划</div>
         <div class="ctrl-row"><label>出发经度</label><input id="fp-dep-lng" type="text" style="width:140px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;" placeholder="116.39"></div>
         <div class="ctrl-row"><label>出发纬度</label><input id="fp-dep-lat" type="text" style="width:140px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:4px 6px;border-radius:4px;font-size:12px;" placeholder="39.93"></div>
