@@ -133,22 +133,18 @@ var AircraftManager = (function () {
         });
         entity._acData = ac;
 
-        // 拖尾（动态更新）
+        // 拖尾（简化：只存坐标点，不渲染实时polyline，减少分配）
         var trailEntity = this.viewer.entities.add({
             polyline: {
-                positions: new Cesium.CallbackProperty(function () {
-                    if (!ac.trailPoints || ac.trailPoints.length < 2) return Cesium.Cartesian3.fromDegreesArrayHeights([]);
-                    var pts = [];
-                    for (var j = 0; j < ac.trailPoints.length; j++) {
-                        pts.push(ac.trailPoints[j][0], ac.trailPoints[j][1], ac.trailPoints[j][2]);
-                    }
-                    return Cesium.Cartesian3.fromDegreesArrayHeights(pts);
-                }, false),
-                width: 3,
-                material: color.withAlpha(0.5),
+                positions: Cesium.Cartesian3.fromDegreesArrayHeights([]),
+                width: 2,
+                material: color.withAlpha(0.3),
                 clampToGround: false,
             },
         });
+        // 每 2 秒更新一次拖尾（而非每帧）
+        trailEntity._trailAc = ac;
+        trailEntity._trailLastUpdate = 0;
 
         this.aircraft[ac.id].entity = entity;
         this.aircraft[ac.id].routeEntity = routeEntity;
@@ -248,7 +244,24 @@ var AircraftManager = (function () {
     AircraftManager.prototype._updateTrail = function (ac) {
         if (!ac.trailPoints) ac.trailPoints = [];
         ac.trailPoints.push([ac.currentLng, ac.currentLat, ac.currentAlt]);
-        if (ac.trailPoints.length > 40) ac.trailPoints.shift();
+        if (ac.trailPoints.length > 30) ac.trailPoints.shift();
+
+        // 节流：每 1 秒更新拖尾 polyline
+        var now = Date.now();
+        var entry = this.aircraft[ac.id];
+        if (entry && entry.trailEntity) {
+            var te = entry.trailEntity;
+            if (!te._trailLastUpdate || now - te._trailLastUpdate > 1000) {
+                te._trailLastUpdate = now;
+                if (ac.trailPoints.length >= 2) {
+                    var pts = [];
+                    for (var j = 0; j < ac.trailPoints.length; j++) {
+                        pts.push(ac.trailPoints[j][0], ac.trailPoints[j][1], ac.trailPoints[j][2]);
+                    }
+                    te.polyline.positions = Cesium.Cartesian3.fromDegreesArrayHeights(pts);
+                }
+            }
+        }
     };
 
     // ============ 禁飞区检测 ============
