@@ -19,6 +19,8 @@ var AircraftManager = (function () {
         this.animFrame = null;
         this.noflyZones = [];     // 禁飞区 [{lon,lat,r,name}]
         this.noflyWarned = {};    // 去重 key
+        this.gridEntities = [];   // 空域网格实体
+        this.showGrid = false;
     }
 
     // ============ 加载 ============
@@ -240,6 +242,7 @@ var AircraftManager = (function () {
             this._updatePanel();
             this._lastPanelUpdate = now;
         }
+        this.updateGrid();
     };
 
     AircraftManager.prototype._moveAircraft = function (ac, dt) {
@@ -456,6 +459,57 @@ var AircraftManager = (function () {
         }
     };
 
+    // ============ 空域网格 ============
+    AircraftManager.prototype.createAirspaceGrid = function (bbox) {
+        this.clearGrid();
+        if (!bbox) return;
+        var rows = 8, cols = 8;
+        var dLat = (bbox.north - bbox.south) / rows;
+        var dLon = (bbox.east - bbox.west) / cols;
+        for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+                var south = bbox.south + r * dLat, north = south + dLat;
+                var west = bbox.west + c * dLon, east = west + dLon;
+                var e = this.viewer.entities.add({
+                    rectangle: {
+                        coordinates: Cesium.Rectangle.fromDegrees(west, south, east, north),
+                        material: Cesium.Color.GREEN.withAlpha(0.06),
+                        outline: true,
+                        outlineColor: Cesium.Color.WHITE.withAlpha(0.15),
+                    },
+                    show: false,
+                });
+                e._gridCell = { row: r, col: c, south: south, west: west, north: north, east: east };
+                this.gridEntities.push(e);
+            }
+        }
+    };
+
+    AircraftManager.prototype.clearGrid = function () {
+        for (var i = 0; i < this.gridEntities.length; i++) {
+            this.viewer.entities.remove(this.gridEntities[i]);
+        }
+        this.gridEntities = [];
+    };
+
+    AircraftManager.prototype.updateGrid = function () {
+        if (!this.showGrid || this.gridEntities.length === 0) return;
+        for (var i = 0; i < this.gridEntities.length; i++) {
+            var cell = this.gridEntities[i]._gridCell;
+            var occupied = false;
+            for (var j = 0; j < this.aircraftList.length; j++) {
+                var ac = this.aircraftList[j];
+                if (ac.currentLat >= cell.south && ac.currentLat <= cell.north &&
+                    ac.currentLng >= cell.west && ac.currentLng <= cell.east) {
+                    occupied = true; break;
+                }
+            }
+            this.gridEntities[i].rectangle.material = occupied
+                ? Cesium.Color.ORANGE.withAlpha(0.15)
+                : Cesium.Color.GREEN.withAlpha(0.06);
+        }
+    };
+
     // ============ 选中/详情/追踪 ============
     AircraftManager.prototype.selectAircraft = function (id) {
         var ac = this.aircraftList.find(function (a) { return a.id === id; });
@@ -530,6 +584,8 @@ var AircraftManager = (function () {
         this.viewer.trackedEntity = undefined;
         this.noflyZones = [];
         this.noflyWarned = {};
+        this._conflictPairs = {};
+        this.clearGrid();
         for (var id in this.aircraft) {
             var e = this.aircraft[id];
             if (e.entity) this.viewer.entities.remove(e.entity);

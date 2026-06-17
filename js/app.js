@@ -131,9 +131,12 @@ async function switchCity(key) {
 
     clearScene();
     // v2.0: 先清飞行器，再清瓦片（TileManager._unloadAll 内部处理）
-    if (State.aircraftManager) {
-        State.aircraftManager.clear();
-    }
+        if (State.aircraftManager) {
+            await State.aircraftManager.loadCity(key);
+            // 创建空域网格
+            var bbox = State.tileManager.getCityBBox();
+            State.aircraftManager.createAirspaceGrid(bbox);
+        }
     State.currentCity = key;
 
     showLoading(true, city.name + ' - 加载瓦片索引...');
@@ -247,6 +250,13 @@ function bindUIEvents() {
         }
     });
     dom('toggle-nofly').addEventListener('change', function () { State.showNoFly = this.checked; applyVisibility(); });
+    dom('toggle-grid').addEventListener('change', function () {
+        if (State.aircraftManager) {
+            State.aircraftManager.showGrid = this.checked;
+            var g = State.aircraftManager.gridEntities;
+            if (g) for (var i = 0; i < g.length; i++) g[i].show = this.checked;
+        }
+    });
     dom('toggle-terrain').addEventListener('change', function () {
         State.showTerrain = this.checked;
         State.viewer.terrainProvider = State.showTerrain
