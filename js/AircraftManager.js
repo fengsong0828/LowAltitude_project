@@ -12,11 +12,13 @@ var AircraftManager = (function () {
         this.state = state;
         this.alertSystem = alertSystem;
         this.cameraView = cameraView;
-        this.aircraft = {};       // id → {config, entity, routeEntity, trailPoints}
+        this.aircraft = {};       // id → {config, entity, routeEntity, groundRoute, trailPoints}
         this.aircraftList = [];
         this.cityKey = null;
         this.isActive = false;
         this.animFrame = null;
+        this.noflyZones = [];     // 禁飞区 [{lon,lat,r,name}]
+        this.noflyWarned = {};    // 去重 key
     }
 
     // ============ 加载 ============
@@ -77,16 +79,30 @@ var AircraftManager = (function () {
     AircraftManager.prototype._createEntity = function (ac) {
         var color = Cesium.Color.fromCssColorString(ac.color || '#ff6600');
 
-        // 航线轨迹（高亮实线）
-        var routePos = [];
+        // 航线：地面投影（贴地，宽线，暗色）
+        var routePos2d = [];
         for (var i = 0; i < ac.route.length; i++) {
-            routePos.push(ac.route[i][0], ac.route[i][1], ac.route[i][2]);
+            routePos2d.push(ac.route[i][0], ac.route[i][1]);
+        }
+        var groundRoute = this.viewer.entities.add({
+            polyline: {
+                positions: Cesium.Cartesian3.fromDegreesArray(routePos2d),
+                width: 3,
+                material: color.withAlpha(0.25),
+                clampToGround: true,
+            },
+        });
+
+        // 航线：空中轨迹（在飞行高度，细线，亮色）
+        var routePos3d = [];
+        for (var j = 0; j < ac.route.length; j++) {
+            routePos3d.push(ac.route[j][0], ac.route[j][1], ac.route[j][2]);
         }
         var routeEntity = this.viewer.entities.add({
             polyline: {
-                positions: Cesium.Cartesian3.fromDegreesArrayHeights(routePos),
-                width: 4,
-                material: color.withAlpha(0.7),
+                positions: Cesium.Cartesian3.fromDegreesArrayHeights(routePos3d),
+                width: 3,
+                material: color.withAlpha(0.6),
                 clampToGround: false,
             },
         });
@@ -136,6 +152,7 @@ var AircraftManager = (function () {
 
         this.aircraft[ac.id].entity = entity;
         this.aircraft[ac.id].routeEntity = routeEntity;
+        this.aircraft[ac.id].groundRoute = groundRoute;
         this.aircraft[ac.id].trailEntity = trailEntity;
     };
 
@@ -163,6 +180,7 @@ var AircraftManager = (function () {
             }
             this._updateBattery(ac, dt);
             this._updateTrail(ac);
+            this._checkNoFlyZone(ac);
         }
         // 节流：最多每 500ms 刷新一次面板
         var now = Date.now();
@@ -231,6 +249,48 @@ var AircraftManager = (function () {
         if (!ac.trailPoints) ac.trailPoints = [];
         ac.trailPoints.push([ac.currentLng, ac.currentLat, ac.currentAlt]);
         if (ac.trailPoints.length > 40) ac.trailPoints.shift();
+    };
+
+    // ============ 禁飞区检测 ============
+    AircraftManager.prototype.setNoFlyZones = function (zones) {
+        this.noflyZones = zones || [];
+    };
+
+    AircraftManager.prototype._checkNoFlyZone = function (ac) {
+        if (!this.noflyZones || this.noflyZones.length === 0) return;
+        for (var i = 0; i < this.noflyZones.length; i++) {
+            var z = this.noflyZones[i];
+            var dLat = (ac.currentLat - z.lat) * 111000;
+            var dLon = (ac.currentLng - z.lon) * 111000 * Math.cos(z.lat * Math.PI / 180);
+            var dist = Math.sqrt(dLat * dLat + dLon * dLon);
+            var key = ac.id + '_' + z.n;
+
+            if (dist < z.r && !this.noflyWarned[key]) {
+                this.noflyWarned[key] = Date.now();
+                if (this.alertSystem) {
+                    this.alertSystem.addAlert({
+                        level: 'L3', category: 'fence',
+                        message: ac.callsign + ' 闯入' + z.n + '！距离中心' + dist.toFixed(0) + 'm',
+                        droneId: ac.id,
+                    });
+                }
+                ac.status = 'emergency';
+            }
+            // 接近告警（1.5倍半径）
+            if (dist < z.r * 1.5 && dist >= z.r) {
+                var warnKey = 'warn_' + key;
+                if (!this.noflyWarned[warnKey]) {
+                    this.noflyWarned[warnKey] = Date.now();
+                    if (this.alertSystem) {
+                        this.alertSystem.addAlert({
+                            level: 'L1', category: 'fence',
+                            message: ac.callsign + ' 接近' + z.n + ' (' + dist.toFixed(0) + 'm)',
+                            droneId: ac.id,
+                        });
+                    }
+                }
+            }
+        }
     };
 
     // ============ 选中/详情/追踪 ============
@@ -304,11 +364,14 @@ var AircraftManager = (function () {
     AircraftManager.prototype.clear = function () {
         this.isActive = false;
         if (this.animFrame) { cancelAnimationFrame(this.animFrame); this.animFrame = null; }
-        this.viewer.trackedEntity = undefined;  // 取消追踪
+        this.viewer.trackedEntity = undefined;
+        this.noflyZones = [];
+        this.noflyWarned = {};
         for (var id in this.aircraft) {
             var e = this.aircraft[id];
             if (e.entity) this.viewer.entities.remove(e.entity);
             if (e.routeEntity) this.viewer.entities.remove(e.routeEntity);
+            if (e.groundRoute) this.viewer.entities.remove(e.groundRoute);
             if (e.trailEntity) this.viewer.entities.remove(e.trailEntity);
         }
         this.aircraft = {}; this.aircraftList = []; this.selectedId = null;

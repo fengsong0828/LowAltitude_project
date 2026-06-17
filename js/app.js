@@ -144,6 +144,20 @@ async function switchCity(key) {
             await State.aircraftManager.loadCity(key);
         }
         setupNoFlyZones();
+        // 把禁飞区数据传给飞行器管理器用于闯入检测
+        if (State.aircraftManager) {
+            var zones = State.noflyEntities.map(function (e) {
+                var pos = e.position.getValue();
+                var carto = Cesium.Cartographic.fromCartesian(pos);
+                return {
+                    lon: Cesium.Math.toDegrees(carto.longitude),
+                    lat: Cesium.Math.toDegrees(carto.latitude),
+                    r: e.cylinder.topRadius.getValue(),
+                    n: e.name,
+                };
+            });
+            State.aircraftManager.setNoFlyZones(zones);
+        }
         updateCityUI(key);
         applyVisibility();
 
