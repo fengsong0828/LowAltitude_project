@@ -89,6 +89,10 @@ function initCesium() {
     v.scene.globe.showGroundAtmosphere = true;
     v.scene.skyAtmosphere.brightnessShift = 0.15;
 
+    // 锁定俯视视角-缩放不倾斜
+    v.scene.screenSpaceCameraController.tiltEventTypes = [];
+    v.scene.screenSpaceCameraController.enableCollisionDetection = false;
+
     // 初始视角：完整地球居中，俯视全貌
     v.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(105, -10, 22000000),
