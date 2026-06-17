@@ -155,15 +155,21 @@ var AircraftManager = (function () {
         if (this.animFrame) return;
         var self = this;
         var lastTime = Date.now();
+        var tickCount = 0;
 
         function tick() {
-            if (!self.isActive) return;
+            if (!self.isActive) { self._debug('SIM STOPPED: isActive=false'); return; }
             var dt = Math.min((Date.now() - lastTime) / 1000, 0.3);
             lastTime = Date.now();
             self._updateAll(dt);
+            tickCount++;
+            if (tickCount % 60 === 0) {
+                self._debug('SIM tick=' + tickCount + ' ac=' + self.aircraftList.length + ' dt=' + dt.toFixed(3));
+            }
             self.animFrame = requestAnimationFrame(tick);
         }
         this.animFrame = requestAnimationFrame(tick);
+        this._debug('SIM STARTED');
     };
 
     AircraftManager.prototype._updateAll = function (dt) {
@@ -213,6 +219,10 @@ var AircraftManager = (function () {
         var entry = this.aircraft[ac.id];
         if (entry && entry.entity) {
             entry.entity.position = Cesium.Cartesian3.fromDegrees(ac.currentLng, ac.currentLat, ac.currentAlt);
+            if (this.selectedId === ac.id && !this._lastPosLog || Date.now() - (this._lastPosLog || 0) > 5000) {
+                this._lastPosLog = Date.now();
+                this._debug('POS: ' + ac.callsign + ' @ ' + ac.currentLat.toFixed(4) + ',' + ac.currentLng.toFixed(4) + ' h=' + ac.currentAlt.toFixed(0));
+            }
         }
         if (this.cameraView && this.cameraView.activeAircraft === ac.id) {
             this.cameraView.updatePosition(ac.currentLat, ac.currentLng);
