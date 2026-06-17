@@ -61,71 +61,43 @@
         </div>
     </div>
 
-    <!-- 右侧面板 -->
-    <div id="right-panels">
+    <!-- 左下角告警面板 -->
+    <div id="alert-panel">
+        <div class="panel-header">实时告警 <span id="alert-count" class="alert-count-badge">0</span></div>
+        <div id="alert-list" class="alert-scroll">
+            <div class="alert-empty">暂无告警</div>
+        </div>
+    </div>
 
-        <!-- 控制面板 -->
+    <!-- 右侧面板：图层控制 + 摄像头并列 -->
+    <div id="right-panels">
         <div id="panel" class="rp-section">
             <div class="panel-header">图层控制</div>
             <div class="panel-body">
                 <div class="ctrl-group">
-                    <div class="ctrl-row">
-                        <label>3D 建筑</label>
-                        <input type="checkbox" id="toggle-buildings" checked>
-                    </div>
-                    <div class="ctrl-row">
-                        <label>水体 / 河流</label>
-                        <input type="checkbox" id="toggle-water" checked>
-                    </div>
-                    <div class="ctrl-row">
-                        <label>道路网络</label>
-                        <input type="checkbox" id="toggle-roads" checked>
-                    </div>
-                    <div class="ctrl-row">
-                        <label>植被 / 公园</label>
-                        <input type="checkbox" id="toggle-vegetation" checked>
-                    </div>
-                    <div class="ctrl-row">
-                        <label>3D 真实地形</label>
-                        <input type="checkbox" id="toggle-terrain">
-                    </div>
-                    <div class="ctrl-row">
-                        <label>飞行器</label>
-                        <input type="checkbox" id="toggle-aircraft" checked>
-                    </div>
-                    <div class="ctrl-row">
-                        <label>禁飞区域</label>
-                        <input type="checkbox" id="toggle-nofly">
-                    </div>
-                    <div class="ctrl-row">
-                        <label>空域网格</label>
-                        <input type="checkbox" id="toggle-grid">
-                    </div>
+                    <div class="ctrl-row"><label>3D 建筑</label><input type="checkbox" id="toggle-buildings" checked></div>
+                    <div class="ctrl-row"><label>水体/河流</label><input type="checkbox" id="toggle-water" checked></div>
+                    <div class="ctrl-row"><label>道路网络</label><input type="checkbox" id="toggle-roads" checked></div>
+                    <div class="ctrl-row"><label>植被/公园</label><input type="checkbox" id="toggle-vegetation" checked></div>
+                    <div class="ctrl-row"><label>3D 真实地形</label><input type="checkbox" id="toggle-terrain"></div>
+                    <div class="ctrl-row"><label>飞行器</label><input type="checkbox" id="toggle-aircraft" checked></div>
+                    <div class="ctrl-row"><label>禁飞区域</label><input type="checkbox" id="toggle-nofly"></div>
+                    <div class="ctrl-row"><label>空域网格</label><input type="checkbox" id="toggle-grid"></div>
                 </div>
-                <div style="margin-top:6px;border-top:1px solid rgba(255,255,255,0.08);padding-top:6px;">
-                    <div class="ctrl-label" style="font-size:11px;color:#889;margin-bottom:4px;">飞行器速度</div>
-                    <div style="display:flex;align-items:center;gap:4px;margin-bottom:6px;">
-                        <span style="color:#888;font-size:9px;">1</span>
-                        <input type="range" class="ctrl-slider" id="speed-slider" min="1" max="80" value="20" style="flex:1;">
-                        <span style="color:#888;font-size:9px;">80</span>
-                        <span id="speed-value" style="color:#00d4ff;font-size:10px;width:40px;text-align:right;">20 m/s</span>
+                <div style="border-top:1px solid rgba(255,255,255,0.08);padding-top:6px;margin-top:4px;">
+                    <div style="font-size:10px;color:#889;margin-bottom:3px;">飞行器速度</div>
+                    <div style="display:flex;align-items:center;gap:3px;margin-bottom:4px;">
+                        <input type="range" id="speed-slider" min="1" max="80" value="20" style="flex:1;height:4px;">
+                        <span id="speed-value" style="color:#00d4ff;font-size:10px;width:38px;">20 m/s</span>
                     </div>
-                    <button class="btn btn-sm" id="btn-pause" style="width:100%;margin-bottom:3px;background:#28a745;color:#fff;">暂停仿真</button>
-                    <button class="btn btn-primary btn-sm" id="btn-flyto" style="width:100%;margin-bottom:3px;">飞至数据区</button>
-                    <button class="btn btn-sm" id="btn-commloss" style="width:100%;margin-bottom:3px;background:#dc3545;color:#fff;" title="选中飞行器后点击模拟通信丢失">通信丢失</button>
+                    <button class="btn btn-sm" id="btn-pause" style="width:100%;margin-bottom:2px;background:#28a745;color:#fff;">暂停仿真</button>
+                    <button class="btn btn-primary btn-sm" id="btn-flyto" style="width:100%;margin-bottom:2px;">飞至数据区</button>
+                    <button class="btn btn-sm" id="btn-commloss" style="width:100%;margin-bottom:2px;background:#dc3545;color:#fff;">通信丢失</button>
                     <button class="btn btn-primary btn-sm" id="btn-flightplan" style="width:100%;">提交飞行计划</button>
                 </div>
             </div>
         </div>
-
-        <!-- 告警面板 -->
-        <div id="alert-panel" class="rp-section">
-            <div class="panel-header">实时告警 <span id="alert-count" class="alert-count-badge">0</span></div>
-            <div id="alert-list" class="alert-scroll">
-                <div class="alert-empty">暂无告警</div>
-            </div>
-        </div>
-
+        <!-- 摄像头区域由 JS 动态插入此处 -->
     </div>
 
     <!-- 底部状态栏 -->

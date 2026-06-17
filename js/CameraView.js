@@ -45,7 +45,8 @@ var CameraView = (function () {
             '</div>' +
             '</div>' +
             '<div class="cv-footer"><span class="cv-coord" id="cv-coord">-</span></div>';
-        document.body.appendChild(container);
+        var parent = document.getElementById('right-panels') || document.body;
+        parent.appendChild(container);
 
         // 缓存所有 img 引用
         for (var j = 0; j < 9; j++) {
