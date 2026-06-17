@@ -5,7 +5,7 @@
 var AircraftManager = (function () {
     'use strict';
 
-    var FLEET_URL = 'data/aircraft/';  // 按城市分文件 {city}.json
+    var MAX_AIRCRAFT = 20;  // 飞行器数量上限
 
     function AircraftManager(viewer, state, alertSystem, cameraView) {
         this.viewer = viewer;
@@ -614,7 +614,7 @@ var AircraftManager = (function () {
 
     // ============ 飞行计划 ============
     AircraftManager.prototype.submitFlightPlan = function (depLng, depLat, arrLng, arrLat) {
-        if (this.aircraftList.length >= 8) return '已达飞行器数量上限(8架)';
+        if (this.aircraftList.length >= MAX_AIRCRAFT) return '已达飞行器数量上限(' + MAX_AIRCRAFT + '架)';
         // 简单冲突评估
         for (var i = 0; i < this.aircraftList.length; i++) {
             var ac = this.aircraftList[i];
