@@ -126,6 +126,10 @@ function initCesium() {
                 }
                 State.fpPickMode = null;
                 dom('fp-pick-hint').style.display = 'none';
+                // 恢复遮罩
+                var overlay = document.getElementById('flightplan-overlay');
+                if (overlay) overlay.style.pointerEvents = 'auto';
+                document.getElementById('flightplan-modal').style.pointerEvents = 'auto';
             }
             return;
         }
@@ -358,19 +362,27 @@ function bindUIEvents() {
         _clearPickMarkers();
         document.getElementById('flightplan-modal').style.display = 'none';
         var overlay = document.getElementById('flightplan-overlay');
-        if (overlay) overlay.style.display = 'none';
+        if (overlay) { overlay.style.display = 'none'; overlay.style.pointerEvents = 'auto'; }
+        document.getElementById('flightplan-modal').style.pointerEvents = 'auto';
     });
     dom('btn-fp-pick-dep').addEventListener('click', function (e) {
         e.stopPropagation();
         State.fpPickMode = 'dep';
         dom('fp-pick-hint').style.display = 'block';
         dom('fp-pick-hint').textContent = '🖱 请在地图上点击选择【起点】...';
+        // 穿透遮罩层让地图可点击
+        var overlay = document.getElementById('flightplan-overlay');
+        if (overlay) overlay.style.pointerEvents = 'none';
+        document.getElementById('flightplan-modal').style.pointerEvents = 'auto';
     });
     dom('btn-fp-pick-arr').addEventListener('click', function (e) {
         e.stopPropagation();
         State.fpPickMode = 'arr';
         dom('fp-pick-hint').style.display = 'block';
         dom('fp-pick-hint').textContent = '🖱 请在地图上点击选择【终点】...';
+        var overlay = document.getElementById('flightplan-overlay');
+        if (overlay) overlay.style.pointerEvents = 'none';
+        document.getElementById('flightplan-modal').style.pointerEvents = 'auto';
     });
     dom('btn-fp-submit').addEventListener('click', function () {
         if (!State.aircraftManager) return;
