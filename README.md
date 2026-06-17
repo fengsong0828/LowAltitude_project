@@ -37,7 +37,6 @@
 - **摄像头 PIP** — 点击飞行器弹出 3×3 瓦片卫星图，前进方向始终朝上
 
 ### 数据持久化
-- **上次城市记忆** — 重启自动恢复到上次选择的城市
 - **禁飞区保存** — 绘制后自动保存到 `data/nfz/{city}.json`
 - **飞行计划保存** — 提交后自动保存到 `data/flightplans/{city}.json`
 
@@ -91,8 +90,7 @@
 │   ├── imagery/{z}/{x}/{y}.png    # 本地卫星图块
 │   ├── nfz/{city}.json            # 禁飞区持久化
 │   ├── flightplans/{city}.json    # 飞行计划持久化
-│   ├── srtm/                      # SRTM 高程数据
-│   └── last_city.txt              # 上次选择城市
+│   └── srtm/                      # SRTM 高程数据
 └── node_modules/cesium/           # CesiumJS
 ```
 
@@ -118,7 +116,7 @@ python scripts\download_imagery.py global 3 4
 start.bat
 ```
 
-浏览器自动打开 `http://localhost:8080`，展示完整地球 → 自动加载上次城市（首次默认北京）。
+浏览器自动打开 `http://localhost:8080`，展示完整地球。点击城市按钮进入对应城市。
 
 ### 可选：启动仿真引擎（端口 8765）
 

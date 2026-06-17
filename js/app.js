@@ -754,15 +754,6 @@ async function main() {
 
         showLoading(false);
 
-        // 自动加载上次城市
-        fetch('/api/last-city')
-            .then(function (r) { return r.json(); })
-            .then(function (d) {
-                if (d.city && CITIES[d.city]) {
-                    setTimeout(function () { switchCity(d.city); }, 500);
-                }
-            }).catch(function () {});
-
         State.showNoFly = false;
         dom('toggle-nofly').checked = false;
         applyVisibility();

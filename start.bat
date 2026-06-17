@@ -5,7 +5,6 @@ cd /d "%~dp0"
 :: 确保数据目录存在
 if not exist "data\nfz" mkdir "data\nfz"
 if not exist "data\flightplans" mkdir "data\flightplans"
-if not exist "data\last_city.txt" echo beijing> "data\last_city.txt"
 
 echo ============================================
 echo   低空飞行器管理平台 v3.0
