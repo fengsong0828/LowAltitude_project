@@ -69,7 +69,7 @@ var AircraftManager = (function () {
             id: 'ac_' + ac.id,
             position: Cesium.Cartesian3.fromDegrees(ac.currentLng, ac.currentLat, ac.currentAlt),
             ellipsoid: {
-                radii: new Cesium.Cartesian3(6, 6, 1.5),
+                radii: new Cesium.Cartesian3(15, 15, 3),
                 material: color.withAlpha(0.85),
                 outline: true,
                 outlineColor: Cesium.Color.WHITE,
@@ -84,14 +84,14 @@ var AircraftManager = (function () {
                 style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                 verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
                 pixelOffset: new Cesium.Cartesian2(0, -20),
-                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 15000),
+                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 30000),
             },
             point: {
                 pixelSize: 6,
                 color: color,
                 outlineColor: Cesium.Color.WHITE,
                 outlineWidth: 1,
-                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(15000, 100000),
+                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(5000, 200000),
             },
         });
         entity._acData = ac;

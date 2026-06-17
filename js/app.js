@@ -131,9 +131,10 @@ async function switchCity(key) {
     try {
         await State.tileManager.switchCity(key);
 
-        // v2.0: 加载飞行器
+        // v2.0: 加载飞行器（在 flyTo 之前，确保立即可见）
         if (State.aircraftManager) {
             State.aircraftManager.clear();
+            await State.aircraftManager.loadCity(key);
         }
         setupNoFlyZones();
         updateCityUI(key);
@@ -146,10 +147,6 @@ async function switchCity(key) {
             duration: 2.5,
             complete: function () {
                 State.tileManager.forceUpdate();
-                // 飞行器在城市加载完成后激活
-                if (State.aircraftManager) {
-                    State.aircraftManager.loadCity(key);
-                }
             },
         });
 
