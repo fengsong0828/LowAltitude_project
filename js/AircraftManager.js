@@ -159,12 +159,16 @@ var AircraftManager = (function () {
 
         function tick() {
             if (!self.isActive) { self._debug('SIM STOPPED: isActive=false'); return; }
-            var dt = Math.min((Date.now() - lastTime) / 1000, 0.3);
-            lastTime = Date.now();
-            self._updateAll(dt);
-            tickCount++;
-            if (tickCount % 60 === 0) {
-                self._debug('SIM tick=' + tickCount + ' ac=' + self.aircraftList.length + ' dt=' + dt.toFixed(3));
+            try {
+                var dt = Math.min((Date.now() - lastTime) / 1000, 0.3);
+                lastTime = Date.now();
+                self._updateAll(dt);
+                tickCount++;
+                if (tickCount % 120 === 0) {
+                    self._debug('SIM t=' + tickCount + ' ac=' + self.aircraftList.length + ' dt=' + dt.toFixed(3));
+                }
+            } catch (e) {
+                self._debug('SIM ERROR: ' + e.message);
             }
             self.animFrame = requestAnimationFrame(tick);
         }
